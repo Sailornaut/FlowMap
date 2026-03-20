@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { MapPin, Trash2, Search, Users, Clock, TrendingUp, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MapPin, Trash2, Search, Users, Clock, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -21,6 +15,7 @@ import HourlyChart from "@/components/analysis/HourlyChart";
 import WeeklyChart from "@/components/analysis/WeeklyChart";
 import DemographicsChart from "@/components/analysis/DemographicsChart";
 import NearbyPOIList from "@/components/analysis/NearbyPOIList";
+import { savedLocationsStore } from "@/lib/local-data";
 
 const suitabilityColors = {
   excellent: "bg-green-500/10 text-green-600 border-green-500/20",
@@ -40,21 +35,21 @@ export default function SavedLocations() {
 
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ["saved-locations"],
-    queryFn: () => base44.entities.SavedLocation.list("-created_date", 100),
+    queryFn: () => savedLocationsStore.list(),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.SavedLocation.delete(id),
+    mutationFn: (id) => savedLocationsStore.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["saved-locations"] });
-      toast.success("Location deleted");
+      toast.success("Location deleted.");
     },
   });
 
   const filtered = locations.filter(
-    (l) =>
-      l.name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      l.address?.toLowerCase().includes(searchFilter.toLowerCase())
+    (location) =>
+      location.name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      location.address?.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
   if (isLoading) {
@@ -67,15 +62,16 @@ export default function SavedLocations() {
 
   return (
     <div ref={containerRef} className="p-4 md:p-8 pb-24 md:pb-8 max-w-4xl mx-auto space-y-5 overflow-auto h-full">
-      {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || isRefreshing) && (
-        <div
-          className="flex justify-center transition-all"
-          style={{ height: isRefreshing ? 40 : pullDistance }}
-        >
-          <div className={`w-6 h-6 border-2 border-primary border-t-transparent rounded-full mt-2 ${isRefreshing ? "animate-spin" : ""}`} />
+        <div className="flex justify-center transition-all" style={{ height: isRefreshing ? 40 : pullDistance }}>
+          <div
+            className={`w-6 h-6 border-2 border-primary border-t-transparent rounded-full mt-2 ${
+              isRefreshing ? "animate-spin" : ""
+            }`}
+          />
         </div>
       )}
+
       <div>
         <h1 className="text-2xl font-bold">Saved Locations</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -105,39 +101,36 @@ export default function SavedLocations() {
             <Input
               placeholder="Filter saved locations..."
               value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
+              onChange={(event) => setSearchFilter(event.target.value)}
               className="pl-10"
             />
           </div>
 
           <div className="grid gap-3">
             <AnimatePresence>
-              {filtered.map((loc, i) => (
+              {filtered.map((location, index) => (
                 <motion.div
-                  key={loc.id}
+                  key={location.id}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  transition={{ delay: i * 0.03 }}
+                  transition={{ delay: index * 0.03 }}
                 >
-                  <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setSelectedLocation(loc)}
-                  >
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedLocation(location)}>
                     <CardContent className="p-4 flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <span className="text-lg font-bold text-primary">{loc.traffic_score}</span>
+                        <span className="text-lg font-bold text-primary">{location.traffic_score}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{loc.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
+                        <p className="font-semibold text-sm truncate">{location.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{location.address}</p>
                         <div className="flex gap-2 mt-1.5">
-                          <Badge variant="outline" className={suitabilityColors[loc.business_suitability] || ""}>
-                            {loc.business_suitability}
+                          <Badge variant="outline" className={suitabilityColors[location.business_suitability] || ""}>
+                            {location.business_suitability}
                           </Badge>
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Users className="w-3 h-3" />
-                            {loc.estimated_daily_foot_traffic?.toLocaleString()}/day
+                            {location.estimated_daily_foot_traffic?.toLocaleString()}/day
                           </span>
                         </div>
                       </div>
@@ -145,9 +138,9 @@ export default function SavedLocations() {
                         variant="ghost"
                         size="icon"
                         className="shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteMutation.mutate(loc.id);
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          deleteMutation.mutate(location.id);
                         }}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -161,7 +154,6 @@ export default function SavedLocations() {
         </>
       )}
 
-      {/* Detail dialog */}
       <Dialog open={!!selectedLocation} onOpenChange={() => setSelectedLocation(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           {selectedLocation && (

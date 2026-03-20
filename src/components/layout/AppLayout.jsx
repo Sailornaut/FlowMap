@@ -1,35 +1,37 @@
 import { useState } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { MapPin, BarChart3, Bookmark, Search, User, LogOut, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { useNavigation, TAB_ROOTS } from "@/lib/NavigationContext";
+import { useNavigation } from "@/lib/NavigationContext";
 import PageTransition from "./PageTransition";
 import StackHeader from "./StackHeader";
 import DeleteAccountModal from "./DeleteAccountModal";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { path: "/",          icon: Search,   label: "Analyze"   },
+  { path: "/", icon: Search, label: "Analyze" },
   { path: "/dashboard", icon: BarChart3, label: "Dashboard" },
-  { path: "/saved",     icon: Bookmark,  label: "Saved"     },
+  { path: "/saved", icon: Bookmark, label: "Saved" },
 ];
 
-/* ── Profile bottom sheet (mobile) ──────────────────────────────── */
-function ProfileSheet({ open, onClose, user }) {
+function ProfileSheet({ open, onClose, onLogout, user }) {
   return (
     <AnimatePresence>
       {open && (
         <>
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 z-40 md:hidden"
             onClick={onClose}
           />
           <motion.div
-            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
             transition={{ type: "tween", ease: [0.25, 0.46, 0.45, 0.94], duration: 0.3 }}
             className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl shadow-2xl md:hidden"
             style={{
@@ -55,8 +57,7 @@ function ProfileSheet({ open, onClose, user }) {
               </button>
             </div>
             <div className="flex flex-col gap-3">
-              <Button variant="outline" className="w-full gap-2 justify-start h-11"
-                onClick={() => base44.auth.logout("/")}>
+              <Button variant="outline" className="w-full gap-2 justify-start h-11" onClick={onLogout}>
                 <LogOut className="w-4 h-4" />
                 Sign Out
               </Button>
@@ -69,19 +70,17 @@ function ProfileSheet({ open, onClose, user }) {
   );
 }
 
-/* ── Main layout ─────────────────────────────────────────────────── */
 export default function AppLayout() {
-  const location  = useLocation();
-  const navigate  = useNavigate();
-  const { currentUser }  = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const { activeTab, isChildRoute } = useNavigation();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // When a bottom-tab is tapped while already on that tab → pop to root of tab
   const handleTabPress = (path) => {
-    if (location.pathname === path) return; // already here
+    if (location.pathname === path) return;
+
     if (activeTab === path && isChildRoute) {
-      // Pop back to tab root
       navigate(path, { replace: true });
     } else {
       navigate(path);
@@ -90,12 +89,10 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-
-      {/* ── Desktop sidebar ──────────────────────────────────────── */}
       <aside
         className="hidden md:flex flex-col w-[72px] bg-card border-r border-border items-center gap-2 shrink-0"
         style={{
-          paddingTop:    "calc(1.5rem + env(safe-area-inset-top))",
+          paddingTop: "calc(1.5rem + env(safe-area-inset-top))",
           paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
         }}
       >
@@ -111,9 +108,7 @@ export default function AppLayout() {
               onClick={() => handleTabPress(item.path)}
               className={cn(
                 "tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-14",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
               <item.icon className="w-5 h-5" />
@@ -124,7 +119,7 @@ export default function AppLayout() {
 
         <div className="mt-auto">
           <button
-            onClick={() => base44.auth.logout("/")}
+            onClick={() => logout("/")}
             className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-14 text-muted-foreground hover:text-foreground hover:bg-muted"
             title="Sign out"
           >
@@ -134,7 +129,6 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      {/* ── Content area ─────────────────────────────────────────── */}
       <div
         className="flex-1 flex flex-col overflow-hidden"
         style={{
@@ -142,11 +136,8 @@ export default function AppLayout() {
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-
-        {/* Stack header — only visible on child routes */}
         <StackHeader />
 
-        {/* Page with transition */}
         <main className="flex-1 overflow-hidden relative">
           <PageTransition>
             <div className="absolute inset-0 overflow-auto">
@@ -156,13 +147,12 @@ export default function AppLayout() {
         </main>
       </div>
 
-      {/* ── Mobile bottom nav ────────────────────────────────────── */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border flex justify-around z-30"
         style={{
-          paddingLeft:   "env(safe-area-inset-left)",
-          paddingRight:  "env(safe-area-inset-right)",
-          paddingTop:    "4px",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+          paddingTop: "4px",
           paddingBottom: "calc(4px + env(safe-area-inset-bottom))",
         }}
       >
@@ -183,7 +173,6 @@ export default function AppLayout() {
           );
         })}
 
-        {/* Profile */}
         <button
           onClick={() => setProfileOpen(true)}
           className="tap-target flex flex-col items-center gap-0.5 px-4 rounded-lg transition-colors text-muted-foreground"
@@ -193,8 +182,12 @@ export default function AppLayout() {
         </button>
       </nav>
 
-      {/* Profile sheet */}
-      <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} user={currentUser} />
+      <ProfileSheet
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onLogout={() => logout("/")}
+        user={currentUser}
+      />
     </div>
   );
 }

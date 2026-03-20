@@ -1,39 +1,16 @@
-**Welcome to your Base44 project** 
+# FlowMap
 
-**About**
+FlowMap is a local-first Vite app for exploring locations, generating foot-traffic estimates, and saving places for later comparison.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Development
 
-This project contains everything you need to run your app locally.
+1. Install dependencies with `npm install`
+2. Start the app with `npm run dev`
 
-**Edit the code in your local development environment**
+## Validation
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+- `npm run build`
+- `npm run lint`
+- `npm run typecheck`
 
-**Prerequisites:** 
-
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
-
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
-
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
-
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+Saved locations are stored in browser `localStorage`, so no external backend setup is required.

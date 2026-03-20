@@ -1,4 +1,3 @@
-import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,12 +6,13 @@ import { MapPin, TrendingUp, Users, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
+import { savedLocationsStore } from "@/lib/local-data";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ["saved-locations"],
-    queryFn: () => base44.entities.SavedLocation.list("-created_date", 50),
+    queryFn: () => savedLocationsStore.list(),
   });
 
   const { containerRef, isRefreshing, pullDistance } = usePullToRefresh({
@@ -20,20 +20,20 @@ export default function Dashboard() {
   });
 
   const avgScore = locations.length
-    ? Math.round(locations.reduce((s, l) => s + (l.traffic_score || 0), 0) / locations.length)
+    ? Math.round(locations.reduce((sum, location) => sum + (location.traffic_score || 0), 0) / locations.length)
     : 0;
 
   const avgTraffic = locations.length
-    ? Math.round(locations.reduce((s, l) => s + (l.estimated_daily_foot_traffic || 0), 0) / locations.length)
+    ? Math.round(
+        locations.reduce((sum, location) => sum + (location.estimated_daily_foot_traffic || 0), 0) / locations.length
+      )
     : 0;
 
-  const comparisonData = locations
-    .slice(0, 8)
-    .map((l) => ({
-      name: l.name?.length > 15 ? l.name.slice(0, 15) + "…" : l.name,
-      score: l.traffic_score || 0,
-      traffic: l.estimated_daily_foot_traffic || 0,
-    }));
+  const comparisonData = locations.slice(0, 8).map((location) => ({
+    name: location.name?.length > 15 ? `${location.name.slice(0, 15)}...` : location.name,
+    score: location.traffic_score || 0,
+    traffic: location.estimated_daily_foot_traffic || 0,
+  }));
 
   const suitabilityColors = {
     excellent: "bg-green-500/10 text-green-600 border-green-500/20",
@@ -52,15 +52,16 @@ export default function Dashboard() {
 
   return (
     <div ref={containerRef} className="p-4 md:p-8 pb-24 md:pb-8 max-w-6xl mx-auto space-y-6 overflow-auto h-full">
-      {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || isRefreshing) && (
-        <div
-          className="flex justify-center transition-all"
-          style={{ height: isRefreshing ? 40 : pullDistance }}
-        >
-          <div className={`w-6 h-6 border-2 border-primary border-t-transparent rounded-full mt-2 ${isRefreshing ? "animate-spin" : ""}`} />
+        <div className="flex justify-center transition-all" style={{ height: isRefreshing ? 40 : pullDistance }}>
+          <div
+            className={`w-6 h-6 border-2 border-primary border-t-transparent rounded-full mt-2 ${
+              isRefreshing ? "animate-spin" : ""
+            }`}
+          />
         </div>
       )}
+
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Overview of your analyzed locations</p>
@@ -83,19 +84,22 @@ export default function Dashboard() {
         </Card>
       ) : (
         <>
-          {/* Summary stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { icon: MapPin, label: "Locations", value: locations.length },
-              { icon: BarChart3, label: "Avg Score", value: avgScore + "/100" },
+              { icon: BarChart3, label: "Avg Score", value: `${avgScore}/100` },
               { icon: Users, label: "Avg Daily Traffic", value: avgTraffic.toLocaleString() },
-              { icon: TrendingUp, label: "Best Score", value: Math.max(...locations.map(l => l.traffic_score || 0)) + "/100" },
-            ].map((stat, i) => (
+              {
+                icon: TrendingUp,
+                label: "Best Score",
+                value: `${Math.max(...locations.map((location) => location.traffic_score || 0))}/100`,
+              },
+            ].map((stat, index) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
+                transition={{ delay: index * 0.08 }}
               >
                 <Card>
                   <CardContent className="p-4 flex items-start gap-3">
@@ -112,7 +116,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Comparison chart */}
           {comparisonData.length > 1 && (
             <Card>
               <CardHeader className="pb-2">
@@ -123,7 +126,12 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={comparisonData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                       <Tooltip
                         contentStyle={{
@@ -141,7 +149,6 @@ export default function Dashboard() {
             </Card>
           )}
 
-          {/* Top locations */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold">Top Locations</CardTitle>
@@ -150,21 +157,21 @@ export default function Dashboard() {
               {[...locations]
                 .sort((a, b) => (b.traffic_score || 0) - (a.traffic_score || 0))
                 .slice(0, 5)
-                .map((loc, i) => (
+                .map((location, index) => (
                   <motion.div
-                    key={loc.id}
+                    key={location.id}
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
+                    transition={{ delay: index * 0.05 }}
                     className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                   >
-                    <span className="text-xs font-bold text-muted-foreground w-5">#{i + 1}</span>
+                    <span className="text-xs font-bold text-muted-foreground w-5">#{index + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{loc.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
+                      <p className="text-sm font-medium truncate">{location.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{location.address}</p>
                     </div>
-                    <Badge variant="outline" className={suitabilityColors[loc.business_suitability] || ""}>
-                      {loc.traffic_score}/100
+                    <Badge variant="outline" className={suitabilityColors[location.business_suitability] || ""}>
+                      {location.traffic_score}/100
                     </Badge>
                   </motion.div>
                 ))}

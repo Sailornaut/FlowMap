@@ -12,16 +12,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { savedLocationsStore } from "@/lib/local-data";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function DeleteAccountModal() {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { logout } = useAuth();
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    // Log out — actual account deletion requires backend support.
-    // We log out and redirect to signal the action.
-    await base44.auth.logout("/");
+    savedLocationsStore.clear();
+    logout("/");
   };
 
   return (
@@ -29,15 +30,14 @@ export default function DeleteAccountModal() {
       <AlertDialogTrigger asChild>
         <Button variant="destructive" size="sm" className="gap-2">
           <Trash2 className="w-4 h-4" />
-          Delete Account
+          Clear Local Data
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+          <AlertDialogTitle>Clear local data?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action is permanent and cannot be undone. All your saved
-            locations and analysis history will be deleted.
+            This removes your saved locations from this browser and resets the local session.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -47,10 +47,8 @@ export default function DeleteAccountModal() {
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : null}
-            Yes, delete my account
+            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Yes, clear local data
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

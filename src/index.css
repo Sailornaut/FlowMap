@@ -1,0 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', sans-serif;
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 230 65% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 230 65% 52%;
+    --chart-1: 230 65% 52%;
+    --chart-2: 25 95% 53%;
+    --chart-3: 160 60% 45%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 230 65% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 230 65% 52%;
+  }
+
+  .dark {
+    --background: 224 30% 8%;
+    --foreground: 210 20% 98%;
+    --card: 224 25% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 25% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 230 65% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 224 20% 18%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 224 20% 18%;
+    --muted-foreground: 218 11% 55%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 224 20% 18%;
+    --input: 224 20% 18%;
+    --ring: 230 65% 60%;
+    --chart-1: 230 65% 60%;
+    --chart-2: 25 95% 53%;
+    --chart-3: 160 60% 50%;
+    --chart-4: 280 65% 65%;
+    --chart-5: 340 75% 60%;
+    --sidebar-background: 224 25% 10%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 230 65% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 20% 16%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 224 20% 18%;
+    --sidebar-ring: 230 65% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-inter;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  html {
+    overscroll-behavior: none;
+  }
+  button, a, nav, [role="button"], label {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  /* 44px minimum tap target — apply class "tap-target" to interactive elements */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

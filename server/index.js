@@ -4,6 +4,7 @@ import express from "express";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { Redis } from "@upstash/redis";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -11,15 +12,52 @@ dotenv.config();
 const app = express();
 const port = Number(process.env.PORT || 8787);
 const siteUrl = process.env.VITE_SITE_URL || "http://localhost:5173";
+const configuredOrigins = (process.env.ALLOWED_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = new Set([siteUrl, "http://localhost:5173", "http://127.0.0.1:5173", ...configuredOrigins]);
 const CACHE_TTL_MS = Number(process.env.ANALYSIS_CACHE_TTL_MS || 1000 * 60 * 60 * 24 * 7);
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 1000 * 60 * 60);
 const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 15);
+const CACHE_TTL_SECONDS = Math.max(1, Math.ceil(CACHE_TTL_MS / 1000));
+const RATE_LIMIT_WINDOW_SECONDS = Math.max(1, Math.ceil(RATE_LIMIT_WINDOW_MS / 1000));
 const PLAN_LIMITS = {
   free: 10,
   pro: 250,
   business: 2000,
 };
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
+const hasRedisConfig = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
+app.set("trust proxy", 1);
+
+app.use((request, response, next) => {
+  const origin = request.headers.origin;
+
+  if (!origin) {
+    next();
+    return;
+  }
+
+  if (allowedOrigins.has(origin)) {
+    response.setHeader("Access-Control-Allow-Origin", origin);
+    response.setHeader("Vary", "Origin");
+    response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Stripe-Signature");
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    response.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Cache, X-Plan, X-Usage-Limit, X-Usage-Remaining, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
+    );
+  }
+
+  if (request.method === "OPTIONS") {
+    response.sendStatus(204);
+    return;
+  }
+
+  next();
+});
 
 app.post("/api/stripe/webhook", express.raw({ type: "application/json" }));
 app.use((request, response, next) => {
@@ -37,6 +75,7 @@ const rateLimitStore = new Map();
 let supabaseAdminClient;
 let openAIClient;
 let stripeClient;
+let redisClient;
 
 function getSupabaseAdmin() {
   if (supabaseAdminClient) {
@@ -88,6 +127,23 @@ function getStripeClient() {
   return stripeClient;
 }
 
+function getRedisClient() {
+  if (redisClient) {
+    return redisClient;
+  }
+
+  if (!hasRedisConfig) {
+    return null;
+  }
+
+  redisClient = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+
+  return redisClient;
+}
+
 function normalizeText(value) {
   return String(value || "")
     .trim()
@@ -108,7 +164,7 @@ function buildAnalysisCacheKey(location) {
   return crypto.createHash("sha256").update(JSON.stringify(keyPayload)).digest("hex");
 }
 
-function getCachedAnalysis(key) {
+function getMemoryCachedAnalysis(key) {
   const entry = analysisCache.get(key);
   if (!entry) return null;
 
@@ -120,11 +176,45 @@ function getCachedAnalysis(key) {
   return entry.value;
 }
 
-function setCachedAnalysis(key, value) {
+function setMemoryCachedAnalysis(key, value) {
   analysisCache.set(key, {
     value,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });
+}
+
+async function getCachedAnalysis(key) {
+  const redis = getRedisClient();
+
+  if (redis) {
+    try {
+      const cached = await redis.get(`analysis:${key}`);
+      if (!cached) {
+        return null;
+      }
+
+      return typeof cached === "string" ? JSON.parse(cached) : cached;
+    } catch (error) {
+      console.error("Redis cache read failed, falling back to memory cache.", error);
+    }
+  }
+
+  return getMemoryCachedAnalysis(key);
+}
+
+async function setCachedAnalysis(key, value) {
+  const redis = getRedisClient();
+
+  if (redis) {
+    try {
+      await redis.set(`analysis:${key}`, JSON.stringify(value), { ex: CACHE_TTL_SECONDS });
+      return;
+    } catch (error) {
+      console.error("Redis cache write failed, falling back to memory cache.", error);
+    }
+  }
+
+  setMemoryCachedAnalysis(key, value);
 }
 
 function getClientIdentifier(request) {
@@ -136,9 +226,46 @@ function getClientIdentifier(request) {
   return request.ip || request.socket.remoteAddress || "unknown";
 }
 
-function applyRateLimit(request, response) {
+function setRateLimitHeaders(response, remaining, resetAt) {
+  response.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS);
+  response.setHeader("X-RateLimit-Remaining", remaining);
+  response.setHeader("X-RateLimit-Reset", Math.ceil(resetAt / 1000));
+}
+
+async function applyRateLimit(request, response) {
   const identifier = getClientIdentifier(request);
   const now = Date.now();
+  const resetAt = now + RATE_LIMIT_WINDOW_MS;
+  const redis = getRedisClient();
+
+  if (redis) {
+    try {
+      const windowBucket = Math.floor(now / RATE_LIMIT_WINDOW_MS);
+      const key = `ratelimit:${identifier}:${windowBucket}`;
+      const count = await redis.incr(key);
+
+      if (count === 1) {
+        await redis.expire(key, RATE_LIMIT_WINDOW_SECONDS);
+      }
+
+      const windowResetAt = (windowBucket + 1) * RATE_LIMIT_WINDOW_MS;
+      if (count > RATE_LIMIT_MAX_REQUESTS) {
+        setRateLimitHeaders(response, 0, windowResetAt);
+        response.status(429).json({
+          error: "Rate limit exceeded. Please try again later.",
+          code: "rate_limit_exceeded",
+          retryAfterSeconds: Math.max(1, Math.ceil((windowResetAt - now) / 1000)),
+        });
+        return false;
+      }
+
+      setRateLimitHeaders(response, Math.max(0, RATE_LIMIT_MAX_REQUESTS - count), windowResetAt);
+      return true;
+    } catch (error) {
+      console.error("Redis rate limit check failed, falling back to memory rate limit.", error);
+    }
+  }
+
   const existing = rateLimitStore.get(identifier);
 
   if (!existing || existing.resetAt <= now) {
@@ -147,16 +274,12 @@ function applyRateLimit(request, response) {
       resetAt: now + RATE_LIMIT_WINDOW_MS,
     };
     rateLimitStore.set(identifier, nextEntry);
-    response.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS);
-    response.setHeader("X-RateLimit-Remaining", RATE_LIMIT_MAX_REQUESTS - nextEntry.count);
-    response.setHeader("X-RateLimit-Reset", Math.ceil(nextEntry.resetAt / 1000));
+    setRateLimitHeaders(response, RATE_LIMIT_MAX_REQUESTS - nextEntry.count, nextEntry.resetAt);
     return true;
   }
 
   if (existing.count >= RATE_LIMIT_MAX_REQUESTS) {
-    response.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS);
-    response.setHeader("X-RateLimit-Remaining", 0);
-    response.setHeader("X-RateLimit-Reset", Math.ceil(existing.resetAt / 1000));
+    setRateLimitHeaders(response, 0, existing.resetAt);
     response.status(429).json({
       error: "Rate limit exceeded. Please try again later.",
       code: "rate_limit_exceeded",
@@ -166,9 +289,7 @@ function applyRateLimit(request, response) {
   }
 
   existing.count += 1;
-  response.setHeader("X-RateLimit-Limit", RATE_LIMIT_MAX_REQUESTS);
-  response.setHeader("X-RateLimit-Remaining", RATE_LIMIT_MAX_REQUESTS - existing.count);
-  response.setHeader("X-RateLimit-Reset", Math.ceil(existing.resetAt / 1000));
+  setRateLimitHeaders(response, RATE_LIMIT_MAX_REQUESTS - existing.count, existing.resetAt);
   return true;
 }
 
@@ -188,7 +309,9 @@ function pruneExpiredEntries() {
   }
 }
 
-setInterval(pruneExpiredEntries, 1000 * 60 * 5).unref();
+if (!hasRedisConfig) {
+  setInterval(pruneExpiredEntries, 1000 * 60 * 5).unref();
+}
 
 function getBearerToken(request) {
   const header = request.headers.authorization || "";
@@ -492,6 +615,8 @@ const analysisSchema = {
 app.get("/api/health", (_request, response) => {
   response.json({
     ok: true,
+    cacheBackend: hasRedisConfig ? "upstash-redis" : "memory",
+    rateLimitBackend: hasRedisConfig ? "upstash-redis" : "memory",
     cacheTtlMs: CACHE_TTL_MS,
     rateLimitWindowMs: RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: RATE_LIMIT_MAX_REQUESTS,
@@ -629,7 +754,7 @@ app.post("/api/stripe/webhook", async (request, response) => {
 
 app.post("/api/analyze", async (request, response) => {
   try {
-    if (!applyRateLimit(request, response)) {
+    if (!(await applyRateLimit(request, response))) {
       return;
     }
 
@@ -646,7 +771,7 @@ app.post("/api/analyze", async (request, response) => {
     }
 
     const cacheKey = buildAnalysisCacheKey(location);
-    const cached = getCachedAnalysis(cacheKey);
+    const cached = await getCachedAnalysis(cacheKey);
     if (cached) {
       response.setHeader("X-Cache", "HIT");
       response.setHeader("X-Plan", context.tier);
@@ -727,7 +852,7 @@ app.post("/api/analyze", async (request, response) => {
     });
 
     const payload = JSON.parse(result.output_text);
-    setCachedAnalysis(cacheKey, payload);
+    await setCachedAnalysis(cacheKey, payload);
     await recordUsageEvent(context.user.id, cacheKey, {
       tier: context.tier,
       locationName: location.name,
@@ -746,4 +871,5 @@ app.listen(port, () => {
       RATE_LIMIT_WINDOW_MS / 1000
     )}s`
   );
+  console.log(`Shared cache backend: ${hasRedisConfig ? "Upstash Redis" : "in-memory fallback"}`);
 });

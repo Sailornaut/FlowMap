@@ -1,5 +1,16 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
+function buildApiUrl(path) {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return apiBaseUrl ? `${apiBaseUrl}${normalizedPath}` : normalizedPath;
+}
+
 async function getAccessToken() {
   if (!isSupabaseConfigured || !supabase) {
     return null;
@@ -24,7 +35,7 @@ export async function apiFetch(path, options = {}) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(path, {
+  return fetch(buildApiUrl(path), {
     ...options,
     headers,
   });

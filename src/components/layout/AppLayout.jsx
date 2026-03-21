@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigation } from "@/lib/NavigationContext";
 import { getAccountSummary, createCheckoutSession } from "@/lib/api-client";
+import { getNextUpgradeTier, getPlanConfig } from "@/lib/plan-config";
 import PageTransition from "./PageTransition";
 import StackHeader from "./StackHeader";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ const navItems = [
 ];
 
 function PlanBadge({ tier }) {
-  const label = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "Free";
+  const label = getPlanConfig(tier).label;
   return <Badge variant={tier === "free" ? "secondary" : "default"}>{label}</Badge>;
 }
 
@@ -32,10 +33,15 @@ export default function AppLayout() {
     queryFn: getAccountSummary,
     staleTime: 1000 * 30,
   });
+  const currentTier = account?.tier || currentUser?.billing_tier || "free";
+  const nextUpgradeTier = getNextUpgradeTier(currentTier);
+  const nextUpgradeLabel = nextUpgradeTier ? getPlanConfig(nextUpgradeTier).label : null;
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (plan = nextUpgradeTier) => {
+    if (!plan) return;
+
     try {
-      const result = await createCheckoutSession("pro");
+      const result = await createCheckoutSession(plan);
       window.location.assign(result.url);
     } catch (error) {
       toast.error(error.message || "Could not start checkout.");
@@ -64,7 +70,7 @@ export default function AppLayout() {
         <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center mb-3">
           <MapPin className="w-5 h-5 text-primary-foreground" />
         </div>
-        <PlanBadge tier={account?.tier || currentUser?.billing_tier || "free"} />
+        <PlanBadge tier={currentTier} />
 
         {navItems.map((item) => {
           const isActive = activeTab === item.path;
@@ -96,20 +102,22 @@ export default function AppLayout() {
               <div className="min-w-0">
                 <p className="text-xs font-semibold truncate">{currentUser?.full_name || "Profile"}</p>
                 <p className="text-[11px] text-muted-foreground truncate">
-                  {account?.tier ? `${account.tier} plan` : currentUser?.billing_tier || "Account"}
+                  {account?.tier ? `${getPlanConfig(account.tier).label} plan` : getPlanConfig(currentTier).label}
                 </p>
               </div>
             </div>
           </button>
 
-          <button
-            onClick={handleUpgrade}
-            className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-            title="Upgrade plan"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="text-[10px] font-medium">Pro</span>
-          </button>
+          {nextUpgradeTier && (
+            <button
+              onClick={() => handleUpgrade(nextUpgradeTier)}
+              className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+              title={`Upgrade to ${nextUpgradeLabel}`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="text-[10px] font-medium">{nextUpgradeLabel}</span>
+            </button>
+          )}
           <button
             onClick={() => logout("/")}
             className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-muted-foreground hover:text-foreground hover:bg-muted"

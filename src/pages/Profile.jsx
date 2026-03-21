@@ -3,12 +3,13 @@ import { CreditCard, Loader2, LogOut, Sparkles, User, ShieldCheck } from "lucide
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
 import { createCheckoutSession, createPortalSession, getAccountSummary } from "@/lib/api-client";
+import { getPlanConfig } from "@/lib/plan-config";
 import DeleteAccountModal from "@/components/layout/DeleteAccountModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 function PlanBadge({ tier }) {
-  const label = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "Free";
+  const label = getPlanConfig(tier).label;
   return <Badge variant={tier === "free" ? "secondary" : "default"}>{label}</Badge>;
 }
 
@@ -19,10 +20,17 @@ export default function Profile() {
     queryFn: getAccountSummary,
     staleTime: 1000 * 30,
   });
+  const currentTier = account?.tier || currentUser?.billing_tier || "free";
+  const availableUpgrades =
+    currentTier === "free"
+      ? ["pro", "business"]
+      : currentTier === "pro"
+        ? ["business"]
+        : [];
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (plan) => {
     try {
-      const result = await createCheckoutSession("pro");
+      const result = await createCheckoutSession(plan);
       window.location.assign(result.url);
     } catch (error) {
       toast.error(error.message || "Could not start checkout.");
@@ -56,17 +64,20 @@ export default function Profile() {
                   <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
                     {currentUser?.full_name || "TrafficScout account"}
                   </h1>
-                  <PlanBadge tier={account?.tier || currentUser?.billing_tier || "free"} />
+                  <PlanBadge tier={currentTier} />
                 </div>
                 <p className="mt-1 text-sm text-slate-600">{currentUser?.email || ""}</p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button className="gap-2" onClick={handleUpgrade}>
-                <Sparkles className="h-4 w-4" />
-                Upgrade plan
-              </Button>
+              {availableUpgrades.length > 0 &&
+                availableUpgrades.map((plan) => (
+                  <Button key={plan} className="gap-2" onClick={() => handleUpgrade(plan)}>
+                    <Sparkles className="h-4 w-4" />
+                    Upgrade to {getPlanConfig(plan).label}
+                  </Button>
+                ))}
               <Button variant="outline" className="gap-2" onClick={handleManageBilling}>
                 <CreditCard className="h-4 w-4" />
                 Manage billing
@@ -102,7 +113,7 @@ export default function Profile() {
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Current plan</p>
                     <div className="mt-3">
-                      <PlanBadge tier={account?.tier || currentUser?.billing_tier || "free"} />
+                      <PlanBadge tier={currentTier} />
                     </div>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -140,10 +151,35 @@ export default function Profile() {
             </p>
 
             <div className="mt-6 space-y-3">
-              <Button className="w-full justify-start gap-2" onClick={handleUpgrade}>
-                <Sparkles className="h-4 w-4" />
-                Upgrade to Pro
-              </Button>
+              {availableUpgrades.length > 0 ? (
+                availableUpgrades.map((plan) => {
+                  const config = getPlanConfig(plan);
+                  return (
+                    <div key={plan} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950">{config.label}</p>
+                          <p className="mt-1 text-sm text-slate-600">{config.blurb}</p>
+                          <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                            {config.monthlyLimit} analyses / month
+                          </p>
+                        </div>
+                        <Button className="shrink-0 gap-2" onClick={() => handleUpgrade(plan)}>
+                          <Sparkles className="h-4 w-4" />
+                          Upgrade
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-sm font-semibold text-emerald-900">You are already on the highest plan</p>
+                  <p className="mt-1 text-sm text-emerald-800">
+                    Premium access is active. Billing tools are still available below if you need to manage it.
+                  </p>
+                </div>
+              )}
               <Button variant="outline" className="w-full justify-start gap-2" onClick={handleManageBilling}>
                 <CreditCard className="h-4 w-4" />
                 Open billing portal

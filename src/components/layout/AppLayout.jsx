@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { MapPin, BarChart3, Bookmark, Search, User, LogOut, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { MapPin, BarChart3, Bookmark, Search, User, LogOut, X, Sparkles, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigation } from "@/lib/NavigationContext";
+import { getAccountSummary, createCheckoutSession, createPortalSession } from "@/lib/api-client";
 import PageTransition from "./PageTransition";
 import StackHeader from "./StackHeader";
 import DeleteAccountModal from "./DeleteAccountModal";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const navItems = [
   { path: "/", icon: Search, label: "Analyze" },
@@ -16,7 +20,12 @@ const navItems = [
   { path: "/saved", icon: Bookmark, label: "Saved" },
 ];
 
-function ProfileSheet({ open, onClose, onLogout, user }) {
+function PlanBadge({ tier }) {
+  const label = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "Free";
+  return <Badge variant={tier === "free" ? "secondary" : "default"}>{label}</Badge>;
+}
+
+function ProfileSheet({ open, onClose, onLogout, onUpgrade, onManageBilling, account, user }) {
   return (
     <AnimatePresence>
       {open && (
@@ -40,7 +49,7 @@ function ProfileSheet({ open, onClose, onLogout, user }) {
             }}
           >
             <div className="w-10 h-1 rounded-full bg-border mx-auto mb-6" />
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="w-6 h-6 text-primary" />
               </div>
@@ -56,7 +65,37 @@ function ProfileSheet({ open, onClose, onLogout, user }) {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <div className="rounded-2xl border border-border bg-muted/40 p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Current plan</p>
+                <PlanBadge tier={account?.tier || "free"} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {account?.usage?.used ?? 0} of {account?.usage?.limit ?? 0} monthly analyses used
+              </p>
+              <div className="mt-3 h-2 rounded-full bg-background overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      ((account?.usage?.used ?? 0) / Math.max(1, account?.usage?.limit ?? 1)) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+
             <div className="flex flex-col gap-3">
+              <Button variant="default" className="w-full gap-2 justify-start h-11" onClick={onUpgrade}>
+                <Sparkles className="w-4 h-4" />
+                Upgrade plan
+              </Button>
+              <Button variant="outline" className="w-full gap-2 justify-start h-11" onClick={onManageBilling}>
+                <CreditCard className="w-4 h-4" />
+                Manage billing
+              </Button>
               <Button variant="outline" className="w-full gap-2 justify-start h-11" onClick={onLogout}>
                 <LogOut className="w-4 h-4" />
                 Sign Out
@@ -77,6 +116,30 @@ export default function AppLayout() {
   const { activeTab, isChildRoute } = useNavigation();
   const [profileOpen, setProfileOpen] = useState(false);
 
+  const { data: account } = useQuery({
+    queryKey: ["account-summary"],
+    queryFn: getAccountSummary,
+    staleTime: 1000 * 30,
+  });
+
+  const handleUpgrade = async () => {
+    try {
+      const result = await createCheckoutSession("pro");
+      window.location.assign(result.url);
+    } catch (error) {
+      toast.error(error.message || "Could not start checkout.");
+    }
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      const result = await createPortalSession();
+      window.location.assign(result.url);
+    } catch (error) {
+      toast.error(error.message || "Could not open billing portal.");
+    }
+  };
+
   const handleTabPress = (path) => {
     if (location.pathname === path) return;
 
@@ -90,15 +153,16 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside
-        className="hidden md:flex flex-col w-[72px] bg-card border-r border-border items-center gap-2 shrink-0"
+        className="hidden md:flex flex-col w-[84px] bg-card border-r border-border items-center gap-2 shrink-0"
         style={{
           paddingTop: "calc(1.5rem + env(safe-area-inset-top))",
           paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
         }}
       >
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center mb-6">
+        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center mb-3">
           <MapPin className="w-5 h-5 text-primary-foreground" />
         </div>
+        <PlanBadge tier={account?.tier || currentUser?.billing_tier || "free"} />
 
         {navItems.map((item) => {
           const isActive = activeTab === item.path;
@@ -107,7 +171,7 @@ export default function AppLayout() {
               key={item.path}
               onClick={() => handleTabPress(item.path)}
               className={cn(
-                "tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-14",
+                "tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16",
                 isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
@@ -117,10 +181,18 @@ export default function AppLayout() {
           );
         })}
 
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col gap-2 items-center">
+          <button
+            onClick={handleUpgrade}
+            className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+            title="Upgrade plan"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="text-[10px] font-medium">Pro</span>
+          </button>
           <button
             onClick={() => logout("/")}
-            className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-14 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-muted-foreground hover:text-foreground hover:bg-muted"
             title="Sign out"
           >
             <LogOut className="w-4 h-4" />
@@ -186,6 +258,9 @@ export default function AppLayout() {
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
         onLogout={() => logout("/")}
+        onUpgrade={handleUpgrade}
+        onManageBilling={handleManageBilling}
+        account={account}
         user={currentUser}
       />
     </div>

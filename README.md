@@ -9,6 +9,14 @@ FlowMap uses Mapbox for place search and geocoding, then sends the resolved loca
 3. Set:
    - `VITE_MAPBOX_ACCESS_TOKEN`
    - `OPENAI_API_KEY`
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+   - `STRIPE_PRICE_PRO_MONTHLY`
+   - `STRIPE_PRICE_BUSINESS_MONTHLY`
+   - `VITE_SITE_URL`
    - optional tuning:
      - `ANALYSIS_CACHE_TTL_MS`
      - `RATE_LIMIT_WINDOW_MS`
@@ -27,6 +35,8 @@ Saved locations are still stored in browser `localStorage`.
 
 - The Vite client proxies `/api` requests to the local Express server on port `8787` during development.
 - Keep `OPENAI_API_KEY` server-side only. It is read by `server/index.js`.
+- Phase 2 uses Supabase Auth/Postgres for users, subscriptions, usage, and saved locations.
+- Stripe Checkout and Customer Portal are created from the server.
 - `/api/analyze` now applies in-memory caching and rate limiting.
 - Current defaults:
   - cache TTL: 7 days

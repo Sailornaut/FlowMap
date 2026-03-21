@@ -7,6 +7,7 @@ import PageNotFound from "@/lib/PageNotFound";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import { NavigationProvider } from "@/lib/NavigationContext";
+import AuthScreen from "@/components/auth/AuthScreen";
 
 const Analyze = lazy(() => import("@/pages/Analyze"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -21,7 +22,7 @@ function PageLoader() {
 }
 
 function AuthenticatedApp() {
-  const { isLoadingAuth, isLoadingPublicSettings } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -29,6 +30,10 @@ function AuthenticatedApp() {
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthScreen />;
   }
 
   return (

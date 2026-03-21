@@ -6,7 +6,7 @@ import { MapPin, TrendingUp, Users, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
-import { savedLocationsStore } from "@/lib/local-data";
+import { savedLocationsStore } from "@/lib/saved-locations";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();

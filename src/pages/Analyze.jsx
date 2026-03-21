@@ -6,10 +6,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import LocationMap from "@/components/analysis/LocationMap";
 import AnalysisPanel from "@/components/analysis/AnalysisPanel";
-import { savedLocationsStore } from "@/lib/local-data";
+import { savedLocationsStore } from "@/lib/saved-locations";
 import { geocodeLocation, reverseGeocodeLocation, searchLocations } from "@/lib/mapbox";
+import { apiFetch } from "@/lib/api-client";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Analyze() {
+  const { currentUser, refreshProfile } = useAuth();
   const [query, setQuery] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,16 +53,16 @@ export default function Analyze() {
     setMarker({ lat: location.latitude, lng: location.longitude, name: location.name });
 
     try {
-      const response = await fetch("/api/analyze", {
+      const response = await apiFetch("/api/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ location }),
       });
 
       const payload = await response.json();
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          await refreshProfile?.();
+        }
         throw new Error(payload.error || "Analysis failed.");
       }
 
@@ -119,7 +122,7 @@ export default function Analyze() {
     setIsSaving(true);
 
     try {
-      savedLocationsStore.create(analysisData);
+      await savedLocationsStore.create(analysisData, currentUser.id);
       toast.success("Location saved successfully.");
     } finally {
       setIsSaving(false);

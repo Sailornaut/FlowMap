@@ -15,7 +15,7 @@ import HourlyChart from "@/components/analysis/HourlyChart";
 import WeeklyChart from "@/components/analysis/WeeklyChart";
 import DemographicsChart from "@/components/analysis/DemographicsChart";
 import NearbyPOIList from "@/components/analysis/NearbyPOIList";
-import { savedLocationsStore } from "@/lib/local-data";
+import { savedLocationsStore } from "@/lib/saved-locations";
 
 const suitabilityColors = {
   excellent: "bg-green-500/10 text-green-600 border-green-500/20",

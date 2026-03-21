@@ -12,17 +12,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from "lucide-react";
-import { savedLocationsStore } from "@/lib/local-data";
+import { savedLocationsStore } from "@/lib/saved-locations";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function DeleteAccountModal() {
   const [isDeleting, setIsDeleting] = useState(false);
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    savedLocationsStore.clear();
-    logout("/");
+    await savedLocationsStore.clear(currentUser.id);
+    await logout("/");
   };
 
   return (
@@ -35,9 +35,9 @@ export default function DeleteAccountModal() {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Clear local data?</AlertDialogTitle>
+          <AlertDialogTitle>Clear account data?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes your saved locations from this browser and resets the local session.
+            This removes your saved locations for your account and signs you out of FlowMap.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

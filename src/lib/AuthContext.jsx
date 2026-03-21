@@ -2,6 +2,35 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const AuthContext = createContext(null);
+const SUPABASE_HASH_KEYS = [
+  "access_token",
+  "refresh_token",
+  "expires_at",
+  "expires_in",
+  "token_type",
+  "provider_token",
+  "provider_refresh_token",
+  "error",
+  "error_code",
+  "error_description",
+  "code",
+];
+
+function clearSupabaseAuthHash() {
+  if (typeof window === "undefined" || !window.location.hash) {
+    return;
+  }
+
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const hasSupabaseAuthParams = SUPABASE_HASH_KEYS.some((key) => hashParams.has(key));
+
+  if (!hasSupabaseAuthParams) {
+    return;
+  }
+
+  const cleanUrl = `${window.location.pathname}${window.location.search}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
 
 async function loadProfile(user) {
   if (!user || !isSupabaseConfigured || !supabase) return null;
@@ -56,6 +85,7 @@ export function AuthProvider({ children }) {
       } finally {
         if (mounted) {
           setIsLoadingAuth(false);
+          clearSupabaseAuthHash();
         }
       }
     }
@@ -76,6 +106,7 @@ export function AuthProvider({ children }) {
           setProfile(null);
           setAuthError(error);
           setIsLoadingAuth(false);
+          clearSupabaseAuthHash();
         }
       }
     }

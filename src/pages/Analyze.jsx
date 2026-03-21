@@ -38,6 +38,7 @@ export default function Analyze() {
         setSuggestions(results);
       } catch (error) {
         setSuggestions([]);
+        toast.error(error.message || "Mapbox predictions are currently unavailable.");
       } finally {
         setIsSearching(false);
       }
@@ -133,7 +134,7 @@ export default function Analyze() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="bg-card border-b border-border px-4 py-3">
+      <div className="relative z-[500] bg-card border-b border-border px-4 py-3">
         {!hasMapboxToken && (
           <div className="max-w-2xl mx-auto mb-3 rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-900 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -157,7 +158,7 @@ export default function Analyze() {
             />
 
             {isFocused && (suggestions.length > 0 || isSearching) && (
-              <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-border bg-popover shadow-xl">
+              <div className="absolute z-[510] mt-2 w-full overflow-hidden rounded-2xl border border-border bg-popover shadow-xl">
                 {isSearching && (
                   <div className="px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />

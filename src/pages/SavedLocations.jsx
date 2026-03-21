@@ -89,7 +89,7 @@ export default function SavedLocations() {
             <p className="text-sm text-muted-foreground max-w-sm">
               Analyze locations and save them to compare and review later.
             </p>
-            <Link to="/" className="text-sm font-medium text-primary hover:underline mt-1">
+            <Link to="/app" className="text-sm font-medium text-primary hover:underline mt-1">
               Analyze a location →
             </Link>
           </CardContent>

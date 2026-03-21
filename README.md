@@ -1,6 +1,6 @@
-# FlowMap
+# TrafficScout
 
-FlowMap uses Mapbox for place search and geocoding, then sends the resolved location to an OpenAI `gpt-5-mini` analysis endpoint that estimates traffic patterns and business suitability.
+TrafficScout uses Mapbox for place search and geocoding, then sends the resolved location to an OpenAI `gpt-5-mini` analysis endpoint that estimates traffic patterns and business suitability.
 
 ## Development
 

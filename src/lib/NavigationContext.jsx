@@ -6,16 +6,16 @@ import { useLocation } from "react-router-dom";
  * Also tracks the "active tab" so tab panes can be shown/hidden.
  */
 
-const TAB_ROOTS = ["/", "/dashboard", "/saved"];
+const TAB_ROOTS = ["/app", "/dashboard", "/saved"];
 
 function getTabRoot(pathname) {
   // Find the deepest matching tab root
-  return TAB_ROOTS.find((t) => pathname === t || pathname.startsWith(t + "/")) || "/";
+  return TAB_ROOTS.find((t) => pathname === t || pathname.startsWith(t + "/")) || "/app";
 }
 
 const NavigationContext = createContext({
   direction: 1,           // 1 = forward/push, -1 = backward/pop
-  activeTab: "/",
+  activeTab: "/app",
   isChildRoute: false,
   goBack: () => {},
 });

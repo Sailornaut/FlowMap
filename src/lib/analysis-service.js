@@ -25,7 +25,7 @@ function deriveLocationName(query, seed) {
     return cleaned;
   }
 
-  return `FlowMap ${PLACE_TYPES[seed % PLACE_TYPES.length]}`;
+  return `TrafficScout ${PLACE_TYPES[seed % PLACE_TYPES.length]}`;
 }
 
 function deriveCoordinates(query, seed) {

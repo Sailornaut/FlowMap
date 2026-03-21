@@ -16,7 +16,7 @@ export default function AuthScreen() {
 
     try {
       await signIn(email);
-      toast.success("Check your inbox for the FlowMap sign-in link.");
+      toast.success("Check your inbox for the TrafficScout sign-in link.");
     } catch (error) {
       toast.error(error.message || "Could not send sign-in email.");
     } finally {
@@ -30,7 +30,7 @@ export default function AuthScreen() {
         <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
           <ShieldCheck className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">Sign in to FlowMap</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Sign in to TrafficScout</h1>
         <p className="text-sm text-muted-foreground mt-3">
           Free accounts get limited monthly analyses. Paid plans unlock higher quotas and billing tools.
         </p>

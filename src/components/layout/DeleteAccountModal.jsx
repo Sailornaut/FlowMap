@@ -37,7 +37,7 @@ export default function DeleteAccountModal() {
         <AlertDialogHeader>
           <AlertDialogTitle>Clear account data?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes your saved locations for your account and signs you out of FlowMap.
+            This removes your saved locations for your account and signs you out of TrafficScout.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

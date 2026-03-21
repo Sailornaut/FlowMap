@@ -77,7 +77,7 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground max-w-sm">
               Search and analyze locations to see your dashboard populate with traffic insights.
             </p>
-            <Link to="/" className="text-sm font-medium text-primary hover:underline mt-1">
+            <Link to="/app" className="text-sm font-medium text-primary hover:underline mt-1">
               Analyze a location →
             </Link>
           </CardContent>

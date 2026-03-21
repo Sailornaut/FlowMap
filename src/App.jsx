@@ -8,9 +8,11 @@ import { AuthProvider, useAuth } from "@/lib/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import { NavigationProvider } from "@/lib/NavigationContext";
 import AuthScreen from "@/components/auth/AuthScreen";
+import Landing from "@/pages/Landing";
 
 const Analyze = lazy(() => import("@/pages/Analyze"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Profile = lazy(() => import("@/pages/Profile"));
 const SavedLocations = lazy(() => import("@/pages/SavedLocations"));
 
 function PageLoader() {
@@ -21,7 +23,7 @@ function PageLoader() {
   );
 }
 
-function AuthenticatedApp() {
+function ProtectedApp() {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -38,36 +40,51 @@ function AuthenticatedApp() {
 
   return (
     <NavigationProvider>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route
-            path="/"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <Analyze />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <Dashboard />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/saved"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <SavedLocations />
-              </Suspense>
-            }
-          />
-        </Route>
-        <Route path="*" element={<PageNotFound />} />
-      </Routes>
+      <AppLayout />
     </NavigationProvider>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route element={<ProtectedApp />}>
+        <Route
+          path="/app"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Analyze />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Dashboard />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/saved"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <SavedLocations />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Profile />
+            </Suspense>
+          }
+        />
+      </Route>
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
   );
 }
 
@@ -76,7 +93,7 @@ export default function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
-          <AuthenticatedApp />
+          <AppRoutes />
         </Router>
         <Toaster />
       </QueryClientProvider>

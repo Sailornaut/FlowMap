@@ -16,7 +16,7 @@ async function loadProfile(user) {
     return {
       id: user.id,
       email: user.email,
-      full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "FlowMap User",
+      full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "TrafficScout User",
       billing_tier: "free",
     };
   }
@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -37,24 +38,52 @@ export function AuthProvider({ children }) {
 
     let mounted = true;
 
-    async function bootstrap() {
-      const {
-        data: { session: nextSession },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
+    async function syncSession(nextSession) {
       setSession(nextSession);
-      setProfile(await loadProfile(nextSession?.user));
-      setIsLoadingAuth(false);
+
+      try {
+        const nextProfile = await loadProfile(nextSession?.user);
+        if (mounted) {
+          setProfile(nextProfile);
+          setAuthError(null);
+        }
+      } catch (error) {
+        if (mounted) {
+          console.error("Failed to load auth profile", error);
+          setProfile(null);
+          setAuthError(error);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingAuth(false);
+        }
+      }
     }
 
-    bootstrap();
+    async function bootstrap() {
+      try {
+        const {
+          data: { session: nextSession },
+        } = await supabase.auth.getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      setSession(nextSession);
-      setProfile(await loadProfile(nextSession?.user));
-      setIsLoadingAuth(false);
+        if (!mounted) return;
+
+        await syncSession(nextSession);
+      } catch (error) {
+        if (mounted) {
+          console.error("Failed to bootstrap auth session", error);
+          setSession(null);
+          setProfile(null);
+          setAuthError(error);
+          setIsLoadingAuth(false);
+        }
+      }
+    }
+
+    void bootstrap();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      void syncSession(nextSession);
     });
 
     return () => {
@@ -71,7 +100,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(session?.user),
       isLoadingAuth,
       isLoadingPublicSettings: false,
-      authError: null,
+      authError,
       appPublicSettings: null,
       authConfigured: isSupabaseConfigured,
       signIn: async (email) => {
@@ -82,7 +111,7 @@ export function AuthProvider({ children }) {
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}/app`,
           },
         });
 
@@ -103,10 +132,17 @@ export function AuthProvider({ children }) {
         window.location.assign("/");
       },
       refreshProfile: async () => {
-        setProfile(await loadProfile(session?.user));
+        try {
+          setProfile(await loadProfile(session?.user));
+          setAuthError(null);
+        } catch (error) {
+          console.error("Failed to refresh auth profile", error);
+          setAuthError(error);
+          throw error;
+        }
       },
     }),
-    [isLoadingAuth, profile, session]
+    [authError, isLoadingAuth, profile, session]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

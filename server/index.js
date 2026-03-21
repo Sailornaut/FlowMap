@@ -201,7 +201,7 @@ async function ensureProfile(user) {
   const payload = {
     id: user.id,
     email: user.email,
-    full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "FlowMap User",
+    full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "TrafficScout User",
   };
 
   const { data, error } = await supabase
@@ -406,7 +406,7 @@ async function syncSubscriptionFromStripe(stripeSubscription) {
 }
 
 const analysisSchema = {
-  name: "flowmap_location_analysis",
+  name: "trafficscout_location_analysis",
   strict: true,
   schema: {
     type: "object",
@@ -740,7 +740,7 @@ app.post("/api/analyze", async (request, response) => {
 });
 
 app.listen(port, () => {
-  console.log(`FlowMap analysis server listening on http://localhost:${port}`);
+  console.log(`TrafficScout analysis server listening on http://localhost:${port}`);
   console.log(
     `Analysis cache TTL: ${Math.round(CACHE_TTL_MS / 1000)}s | Rate limit: ${RATE_LIMIT_MAX_REQUESTS}/${Math.round(
       RATE_LIMIT_WINDOW_MS / 1000

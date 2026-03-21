@@ -649,10 +649,6 @@ app.get("/api/health", (_request, response) => {
   });
 });
 
-app.get("/api/monitoring-test", () => {
-  throw new Error("TrafficScout backend monitoring test");
-});
-
 app.get("/api/account", async (request, response) => {
   try {
     const context = await getAuthenticatedContext(request);

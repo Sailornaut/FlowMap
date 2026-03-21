@@ -899,6 +899,26 @@ app.post("/api/analyze", async (request, response) => {
   }
 });
 
+app.use((error, request, response, _next) => {
+  reportServerError(error, {
+    route: {
+      path: request.path,
+      method: request.method,
+    },
+  });
+
+  if (response.headersSent) {
+    return;
+  }
+
+  if (request.path.startsWith("/api/")) {
+    response.status(500).json({ error: error?.message || "Internal Server Error" });
+    return;
+  }
+
+  response.status(500).send(error?.message || "Internal Server Error");
+});
+
 process.on("unhandledRejection", (reason) => {
   reportServerError(reason instanceof Error ? reason : new Error(String(reason)), {
     process: { event: "unhandledRejection" },

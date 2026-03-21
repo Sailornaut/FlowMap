@@ -9,12 +9,20 @@ TrafficScout uses Mapbox for place search and geocoding, then sends the resolved
 3. Set:
    - `VITE_MAPBOX_ACCESS_TOKEN`
    - `VITE_API_BASE_URL` (leave blank for local dev, set to your Render API URL in production)
-   - `OPENAI_API_KEY`
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_WEBHOOK_SECRET`
+   - optional frontend monitoring:
+     - `VITE_SENTRY_DSN`
+     - `VITE_SENTRY_ENVIRONMENT`
+     - `VITE_SENTRY_TRACES_SAMPLE_RATE`
+    - `OPENAI_API_KEY`
+    - `VITE_SUPABASE_URL`
+    - `VITE_SUPABASE_ANON_KEY`
+    - `SUPABASE_SERVICE_ROLE_KEY`
+    - optional backend monitoring:
+      - `SENTRY_DSN`
+      - `SENTRY_ENVIRONMENT`
+      - `SENTRY_TRACES_SAMPLE_RATE`
+    - `STRIPE_SECRET_KEY`
+    - `STRIPE_WEBHOOK_SECRET`
    - `STRIPE_PRICE_PRO_MONTHLY`
    - `STRIPE_PRICE_BUSINESS_MONTHLY`
    - `VITE_SITE_URL`
@@ -40,6 +48,7 @@ Saved locations are still stored in browser `localStorage`.
 
 - The Vite client proxies `/api` requests to the local Express server on port `8787` during development.
 - In production, set `VITE_API_BASE_URL` to your deployed API origin and `ALLOWED_ORIGIN` to your frontend origin.
+- If `VITE_SENTRY_DSN` or `SENTRY_DSN` are set, TrafficScout sends frontend and backend exceptions to Sentry.
 - Keep `OPENAI_API_KEY` server-side only. It is read by `server/index.js`.
 - Phase 2 uses Supabase Auth/Postgres for users, subscriptions, usage, and saved locations.
 - Stripe Checkout and Customer Portal are created from the server.

@@ -2,12 +2,23 @@ import crypto from "node:crypto";
 import dotenv from "dotenv";
 import express from "express";
 import OpenAI from "openai";
+import * as Sentry from "@sentry/node";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { Redis } from "@upstash/redis";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
+
+const sentryDsn = process.env.SENTRY_DSN;
+
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || "development",
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),
+  });
+}
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -76,6 +87,21 @@ let supabaseAdminClient;
 let openAIClient;
 let stripeClient;
 let redisClient;
+
+function reportServerError(error, context = {}) {
+  console.error(error);
+
+  if (!sentryDsn) {
+    return;
+  }
+
+  Sentry.withScope((scope) => {
+    Object.entries(context).forEach(([key, value]) => {
+      scope.setContext(key, value);
+    });
+    Sentry.captureException(error);
+  });
+}
 
 function getSupabaseAdmin() {
   if (supabaseAdminClient) {
@@ -195,7 +221,7 @@ async function getCachedAnalysis(key) {
 
       return typeof cached === "string" ? JSON.parse(cached) : cached;
     } catch (error) {
-      console.error("Redis cache read failed, falling back to memory cache.", error);
+      reportServerError(error, { redis: { operation: "get", key: `analysis:${key}` } });
     }
   }
 
@@ -210,7 +236,7 @@ async function setCachedAnalysis(key, value) {
       await redis.set(`analysis:${key}`, JSON.stringify(value), { ex: CACHE_TTL_SECONDS });
       return;
     } catch (error) {
-      console.error("Redis cache write failed, falling back to memory cache.", error);
+      reportServerError(error, { redis: { operation: "set", key: `analysis:${key}` } });
     }
   }
 
@@ -262,7 +288,7 @@ async function applyRateLimit(request, response) {
       setRateLimitHeaders(response, Math.max(0, RATE_LIMIT_MAX_REQUESTS - count), windowResetAt);
       return true;
     } catch (error) {
-      console.error("Redis rate limit check failed, falling back to memory rate limit.", error);
+      reportServerError(error, { redis: { operation: "rate_limit", identifier } });
     }
   }
 
@@ -640,6 +666,7 @@ app.get("/api/account", async (request, response) => {
       plans: PLAN_LIMITS,
     });
   } catch (error) {
+    reportServerError(error, { route: { path: "/api/account", method: "GET" } });
     response.status(500).json({ error: error?.message || "Could not load account." });
   }
 });
@@ -687,6 +714,7 @@ app.post("/api/billing/checkout", async (request, response) => {
 
     response.json({ url: session.url });
   } catch (error) {
+    reportServerError(error, { route: { path: "/api/billing/checkout", method: "POST" } });
     response.status(500).json({ error: error?.message || "Could not create checkout session." });
   }
 });
@@ -708,6 +736,7 @@ app.post("/api/billing/portal", async (request, response) => {
 
     response.json({ url: session.url });
   } catch (error) {
+    reportServerError(error, { route: { path: "/api/billing/portal", method: "POST" } });
     response.status(500).json({ error: error?.message || "Could not create billing portal session." });
   }
 });
@@ -748,6 +777,7 @@ app.post("/api/stripe/webhook", async (request, response) => {
 
     response.json({ received: true });
   } catch (error) {
+    reportServerError(error, { route: { path: "/api/stripe/webhook", method: "POST" } });
     response.status(400).send(error?.message || "Webhook failed");
   }
 });
@@ -860,8 +890,19 @@ app.post("/api/analyze", async (request, response) => {
 
     response.json(payload);
   } catch (error) {
+    reportServerError(error, { route: { path: "/api/analyze", method: "POST" } });
     response.status(500).json({ error: error?.message || "Analysis failed." });
   }
+});
+
+process.on("unhandledRejection", (reason) => {
+  reportServerError(reason instanceof Error ? reason : new Error(String(reason)), {
+    process: { event: "unhandledRejection" },
+  });
+});
+
+process.on("uncaughtException", (error) => {
+  reportServerError(error, { process: { event: "uncaughtException" } });
 });
 
 app.listen(port, () => {
@@ -872,4 +913,5 @@ app.listen(port, () => {
     )}s`
   );
   console.log(`Shared cache backend: ${hasRedisConfig ? "Upstash Redis" : "in-memory fallback"}`);
+  console.log(`Monitoring: ${sentryDsn ? "Sentry enabled" : "Sentry disabled"}`);
 });

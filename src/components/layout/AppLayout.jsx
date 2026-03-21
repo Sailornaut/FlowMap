@@ -26,6 +26,13 @@ function PlanBadge({ tier }) {
 }
 
 function ProfileSheet({ open, onClose, onLogout, onUpgrade, onManageBilling, account, user }) {
+  const initials = (user?.full_name || user?.email || "TS")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
   return (
     <AnimatePresence>
       {open && (
@@ -34,15 +41,15 @@ function ProfileSheet({ open, onClose, onLogout, onUpgrade, onManageBilling, acc
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            className="fixed inset-0 bg-black/40 z-[120]"
             onClick={onClose}
           />
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "tween", ease: [0.25, 0.46, 0.45, 0.94], duration: 0.3 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl shadow-2xl md:hidden"
+            className="fixed bottom-0 left-0 right-0 z-[130] bg-card rounded-t-2xl shadow-2xl md:bottom-6 md:right-6 md:left-auto md:top-6 md:w-[360px] md:rounded-3xl md:border md:border-border"
             style={{
               padding: "1.5rem",
               paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
@@ -50,8 +57,8 @@ function ProfileSheet({ open, onClose, onLogout, onUpgrade, onManageBilling, acc
           >
             <div className="w-10 h-1 rounded-full bg-border mx-auto mb-6" />
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-6 h-6 text-primary" />
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                {initials || <User className="w-6 h-6 text-primary" />}
               </div>
               <div>
                 <p className="font-semibold">{user?.full_name || "User"}</p>
@@ -153,7 +160,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside
-        className="hidden md:flex flex-col w-[84px] bg-card border-r border-border items-center gap-2 shrink-0"
+        className="hidden md:flex flex-col w-[96px] bg-card border-r border-border items-center gap-2 shrink-0"
         style={{
           paddingTop: "calc(1.5rem + env(safe-area-inset-top))",
           paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
@@ -181,7 +188,25 @@ export default function AppLayout() {
           );
         })}
 
-        <div className="mt-auto flex flex-col gap-2 items-center">
+        <div className="mt-auto flex flex-col gap-2 items-center w-full px-3">
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-full rounded-2xl border border-border bg-muted/40 px-3 py-3 text-left transition-colors hover:bg-muted"
+            title="Open profile"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold truncate">{currentUser?.full_name || "Profile"}</p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {account?.tier ? `${account.tier} plan` : currentUser?.billing_tier || "Account"}
+                </p>
+              </div>
+            </div>
+          </button>
+
           <button
             onClick={handleUpgrade}
             className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-amber-600 hover:text-amber-700 hover:bg-amber-50"

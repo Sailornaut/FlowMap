@@ -19,6 +19,9 @@ import TrafficScoutLogo from "@/components/brand/TrafficScoutLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const contactEmail = "hello@gettrafficscout.com";
+const contactHref = `mailto:${contactEmail}?subject=${encodeURIComponent("TrafficScout inquiry")}`;
+
 const featureCards = [
   {
     icon: Users,
@@ -307,7 +310,7 @@ export default function Landing() {
             <NavLink href="#how-it-works">How It Works</NavLink>
             <NavLink href="#use-cases">Use Cases</NavLink>
             <NavLink href="#pricing">Pricing</NavLink>
-            <NavLink href="#contact">Contact</NavLink>
+            <NavLink href={contactHref}>Contact</NavLink>
           </nav>
           <div className="flex items-center gap-3">
             <Button asChild variant="outline" className="hidden rounded-full border-slate-300 bg-white/80 px-5 lg:inline-flex">
@@ -599,7 +602,7 @@ export default function Landing() {
             {[
               ["Features", "#features"],
               ["Use Cases", "#use-cases"],
-              ["Contact", "#contact"],
+              ["Contact", contactHref],
               ["Privacy", "#"],
               ["Terms", "#"],
             ].map(([label, href]) => (

@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { savedLocationsStore } from "@/lib/saved-locations";
+import CheckoutStatusBanner from "@/components/billing/CheckoutStatusBanner";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -66,6 +67,8 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Overview of your analyzed locations</p>
       </div>
+
+      <CheckoutStatusBanner />
 
       {locations.length === 0 ? (
         <Card className="py-16 text-center">

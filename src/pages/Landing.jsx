@@ -129,7 +129,7 @@ function HeroVisual() {
   const bars = useMemo(() => [48, 62, 76, 68, 88, 94, 72], []);
 
   return (
-    <div className="relative w-full max-w-[620px]">
+    <div className="relative w-full max-w-[620px] min-w-0">
       <div className="absolute -left-10 top-16 h-40 w-40 rounded-full bg-[#1777F6]/15 blur-3xl" />
       <div className="absolute -right-6 bottom-4 h-44 w-44 rounded-full bg-[#2EC671]/20 blur-3xl" />
 
@@ -140,23 +140,27 @@ function HeroVisual() {
         className="relative overflow-hidden rounded-[32px] border border-white/60 bg-white/85 shadow-[0_30px_80px_rgba(9,30,49,0.12)] backdrop-blur"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(23,119,246,0.10),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(46,198,113,0.12),transparent_30%)]" />
-        <div className="relative border-b border-slate-200/80 px-6 py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-[#091E31]">Live territory snapshot</p>
-              <p className="text-xs text-slate-500">Jersey City retail corridor</p>
+        <div className="relative border-b border-slate-200/80 px-5 py-5 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#091E31] sm:text-base">Live territory snapshot</p>
+              <p className="truncate text-xs text-slate-500 sm:text-sm">Jersey City retail corridor</p>
             </div>
-            <div className="rounded-full bg-[#091E31] px-3 py-1 text-xs font-semibold text-white">Opportunity score 8.7</div>
+            <div className="shrink-0 rounded-full bg-[#091E31] px-3 py-1 text-xs font-semibold text-white sm:text-sm">
+              Opportunity score 8.7
+            </div>
           </div>
         </div>
 
-        <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.95fr]">
-          <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#f4fbf7_100%)] p-5">
-            <div className="flex items-center justify-between">
-              <div className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-[#177F64] shadow-sm">Predictive location intelligence</div>
-              <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs text-slate-500 shadow-sm">
+        <div className="grid gap-6 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.28fr)_minmax(260px,0.92fr)]">
+          <div className="min-w-0 rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#f4fbf7_100%)] p-4 sm:p-5">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="max-w-full rounded-full bg-white/80 px-3 py-1 text-xs font-semibold leading-5 text-[#177F64] shadow-sm sm:text-sm">
+                Predictive location intelligence
+              </div>
+              <div className="flex max-w-full items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs leading-5 text-slate-500 shadow-sm sm:text-sm">
                 <CircleDot className="h-3.5 w-3.5 text-[#1777F6]" />
-                High-confidence corridor
+                <span>High-confidence corridor</span>
               </div>
             </div>
 
@@ -191,7 +195,7 @@ function HeroVisual() {
 
               {[
                 { left: "12%", top: "68%", score: "6.8" },
-                { left: "46%", top: "47%", score: "8.7" },
+                { left: "51%", top: "44%", score: "8.7" },
                 { left: "79%", top: "25%", score: "7.9" },
               ].map((node, index) => (
                 <motion.div
@@ -203,27 +207,29 @@ function HeroVisual() {
                   style={{ left: node.left, top: node.top }}
                 >
                   <div className="absolute -inset-4 rounded-full bg-[#2EC671]/20 blur-xl" />
-                  <div className="relative flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-[#091E31] text-sm font-semibold text-white shadow-lg">
+                  <div className="relative flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-[#091E31] text-sm font-semibold text-white shadow-lg sm:h-14 sm:w-14">
                     {node.score}
                   </div>
                 </motion.div>
               ))}
 
-              <div className="absolute bottom-4 left-4 rounded-2xl border border-white/70 bg-white/90 px-4 py-3 shadow-lg">
+              <div className="absolute bottom-4 left-4 right-4 max-w-[280px] rounded-2xl border border-white/70 bg-white/92 px-4 py-2.5 shadow-lg sm:max-w-[300px]">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Peak window</p>
-                <p className="mt-1 text-lg font-bold text-[#091E31]">12 PM – 2 PM</p>
+                <p className="mt-1 text-base font-bold text-[#091E31] sm:text-lg">12 PM – 2 PM</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-[#091E31]">Traffic trend</p>
-                  <p className="text-xs text-slate-500">Week over week movement</p>
+          <div className="min-w-0 space-y-4">
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#091E31] sm:text-base">Traffic trend</p>
+                  <p className="text-xs text-slate-500 sm:text-sm">Week over week movement</p>
                 </div>
-                <div className="rounded-full bg-[#2EC671]/15 px-3 py-1 text-xs font-semibold text-[#177F64]">+23% stronger traffic</div>
+                <div className="max-w-full rounded-full bg-[#2EC671]/15 px-3 py-1 text-xs font-semibold leading-5 text-[#177F64] sm:text-sm">
+                  +23% stronger traffic
+                </div>
               </div>
               <div className="mt-4 flex h-32 items-end gap-2">
                 {bars.map((height, index) => (
@@ -238,16 +244,20 @@ function HeroVisual() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               {[
                 ["Daily footfall", "18.4K"],
                 ["Conversion zone", "North waterfront"],
                 ["Competitive index", "Moderate"],
                 ["Decision confidence", "High"],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-                  <p className="mt-2 text-lg font-semibold text-[#091E31]">{value}</p>
+                <div key={label} className="min-w-0 rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-xs sm:tracking-[0.14em]">
+                    {label}
+                  </p>
+                  <p className="mt-2 text-base font-semibold leading-snug text-[#091E31] sm:text-lg">
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>

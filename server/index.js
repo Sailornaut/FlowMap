@@ -93,7 +93,10 @@ app.use((request, response, next) => {
   if (isAllowedOrigin(origin)) {
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Vary", "Origin");
-    response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Stripe-Signature");
+    response.setHeader(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type, Stripe-Signature, baggage, sentry-trace"
+    );
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
     response.setHeader("Access-Control-Max-Age", "86400");
     response.setHeader(

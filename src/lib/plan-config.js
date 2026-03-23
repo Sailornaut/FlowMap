@@ -2,20 +2,23 @@ export const PLAN_CONFIG = {
   free: {
     key: "free",
     label: "Free",
-    monthlyLimit: 10,
-    blurb: "Explore location analysis with a lighter monthly limit.",
+    totalLimit: 3,
+    priceLabel: "$0",
+    blurb: "Try TrafficScout with 3 total analyses before upgrading.",
   },
   pro: {
     key: "pro",
     label: "Pro",
-    monthlyLimit: 250,
-    blurb: "Higher monthly analysis limits for serious scouting workflows.",
+    totalLimit: null,
+    priceLabel: "$9/month",
+    blurb: "Unlimited analyses for teams making location decisions regularly.",
   },
   business: {
     key: "business",
     label: "Business",
-    monthlyLimit: 2000,
-    blurb: "Expanded usage for teams running larger-scale location decisions.",
+    totalLimit: null,
+    priceLabel: "Legacy",
+    blurb: "Legacy unlimited access for earlier subscribers.",
   },
 };
 
@@ -25,6 +28,5 @@ export function getPlanConfig(tier) {
 
 export function getNextUpgradeTier(tier) {
   if (tier === "free") return "pro";
-  if (tier === "pro") return "business";
   return null;
 }

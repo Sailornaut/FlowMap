@@ -73,9 +73,9 @@ const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 15
 const CACHE_TTL_SECONDS = Math.max(1, Math.ceil(CACHE_TTL_MS / 1000));
 const RATE_LIMIT_WINDOW_SECONDS = Math.max(1, Math.ceil(RATE_LIMIT_WINDOW_MS / 1000));
 const PLAN_LIMITS = {
-  free: 10,
-  pro: 250,
-  business: 2000,
+  free: 3,
+  pro: null,
+  business: null,
 };
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
 const hasRedisConfig = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
@@ -462,20 +462,13 @@ function deriveBillingTier(profile, subscription) {
   return profile?.billing_tier || "free";
 }
 
-function getUsageWindowStart() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-}
-
 async function getUsageSummary(userId, tier) {
   const supabase = getSupabaseAdmin();
-  const periodStart = getUsageWindowStart();
   const { count, error } = await supabase
     .from("usage_events")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
-    .eq("event_type", "analysis_run")
-    .gte("created_at", periodStart);
+    .eq("event_type", "analysis_run");
 
   if (error) {
     throw error;
@@ -483,12 +476,13 @@ async function getUsageSummary(userId, tier) {
 
   const used = count || 0;
   const limit = PLAN_LIMITS[tier] ?? PLAN_LIMITS.free;
+  const isUnlimited = limit === null;
 
   return {
     used,
     limit,
-    remaining: Math.max(0, limit - used),
-    periodStart,
+    remaining: isUnlimited ? null : Math.max(0, limit - used),
+    resetPolicy: tier === "free" ? "lifetime" : "unlimited",
   };
 }
 
@@ -509,10 +503,6 @@ async function recordUsageEvent(userId, cacheKey, metadata = {}) {
 function getTierPriceId(plan) {
   if (plan === "pro") {
     return process.env.STRIPE_PRICE_PRO_MONTHLY;
-  }
-
-  if (plan === "business") {
-    return process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
   }
 
   return null;
@@ -854,12 +844,12 @@ app.post("/api/analyze", async (request, response) => {
 
     const usage = await getUsageSummary(context.user.id, context.tier);
     response.setHeader("X-Plan", context.tier);
-    response.setHeader("X-Usage-Limit", usage.limit);
-    response.setHeader("X-Usage-Remaining", usage.remaining);
+    response.setHeader("X-Usage-Limit", usage.limit === null ? "unlimited" : String(usage.limit));
+    response.setHeader("X-Usage-Remaining", usage.remaining === null ? "unlimited" : String(usage.remaining));
 
-    if (usage.remaining <= 0) {
+    if (usage.remaining !== null && usage.remaining <= 0) {
       response.status(403).json({
-        error: `You have reached the ${context.tier} plan limit for this month.`,
+        error: `You have reached the ${context.tier} plan limit.`,
         code: "plan_limit_reached",
         tier: context.tier,
         usage,

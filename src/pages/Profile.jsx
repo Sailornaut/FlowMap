@@ -13,6 +13,10 @@ function PlanBadge({ tier }) {
   return <Badge variant={tier === "free" ? "secondary" : "default"}>{label}</Badge>;
 }
 
+function formatAllowance(plan) {
+  return plan.totalLimit === null ? "Unlimited" : String(plan.totalLimit);
+}
+
 export default function Profile() {
   const { currentUser, logout } = useAuth();
   const { data: account, isLoading } = useQuery({
@@ -22,12 +26,7 @@ export default function Profile() {
   });
   const currentTier = account?.tier || currentUser?.billing_tier || "free";
   const currentPlan = getPlanConfig(currentTier);
-  const availableUpgrades =
-    currentTier === "free"
-      ? ["pro", "business"]
-      : currentTier === "pro"
-        ? ["business"]
-        : [];
+  const availableUpgrades = currentTier === "free" ? ["pro"] : [];
 
   const handleUpgrade = async (plan) => {
     try {
@@ -48,8 +47,9 @@ export default function Profile() {
   };
 
   const usageUsed = account?.usage?.used ?? 0;
-  const usageLimit = account?.usage?.limit ?? currentPlan.monthlyLimit;
-  const usagePercent = Math.min(100, (usageUsed / Math.max(1, usageLimit || 1)) * 100);
+  const usageLimit = account?.usage?.limit ?? currentPlan.totalLimit;
+  const usageLabel = usageLimit === null ? "Unlimited" : usageLimit;
+  const usagePercent = usageLimit === null ? 0 : Math.min(100, (usageUsed / Math.max(1, usageLimit || 1)) * 100);
 
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
@@ -99,7 +99,7 @@ export default function Profile() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-slate-950">Plan and usage</h2>
-                <p className="text-sm text-slate-600">Track your monthly analysis capacity and billing access.</p>
+                <p className="text-sm text-slate-600">Track your analysis allowance and billing access.</p>
               </div>
             </div>
 
@@ -122,8 +122,8 @@ export default function Profile() {
                     <p className="mt-3 text-2xl font-semibold text-slate-950">{usageUsed}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Monthly limit</p>
-                    <p className="mt-3 text-2xl font-semibold text-slate-950">{usageLimit}</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Plan allowance</p>
+                    <p className="mt-3 text-2xl font-semibold text-slate-950">{usageLabel}</p>
                   </div>
                 </div>
 
@@ -131,15 +131,29 @@ export default function Profile() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-slate-900">Usage progress</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {usageUsed} of {usageLimit} monthly analyses used
-                      </p>
+                      {usageLimit === null ? (
+                        <p className="mt-1 text-sm text-slate-600">Unlimited analyses are active on your plan.</p>
+                      ) : (
+                        <p className="mt-1 text-sm text-slate-600">
+                          {usageUsed} of {usageLimit} total analyses used
+                        </p>
+                      )}
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">{Math.round(usagePercent)}%</p>
+                    {usageLimit === null ? (
+                      <p className="text-sm font-semibold text-emerald-700">Unlimited</p>
+                    ) : (
+                      <p className="text-sm font-semibold text-slate-900">{Math.round(usagePercent)}%</p>
+                    )}
                   </div>
-                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${usagePercent}%` }} />
-                  </div>
+                  {usageLimit === null ? (
+                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+                      Unlimited analyses included with {currentPlan.label}.
+                    </div>
+                  ) : (
+                    <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${usagePercent}%` }} />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -162,8 +176,11 @@ export default function Profile() {
                           <p className="text-sm font-semibold text-slate-950">{config.label}</p>
                           <p className="mt-1 text-sm text-slate-600">{config.blurb}</p>
                           <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                            {config.monthlyLimit} analyses / month
+                            {formatAllowance(config)} analyses {config.totalLimit === null ? "" : "total"}
                           </p>
+                          {plan === "pro" ? (
+                            <p className="mt-2 text-xs font-medium text-slate-500">{config.priceLabel}</p>
+                          ) : null}
                         </div>
                         <Button className="shrink-0 gap-2" onClick={() => handleUpgrade(plan)}>
                           <Sparkles className="h-4 w-4" />
@@ -175,12 +192,21 @@ export default function Profile() {
                 })
               ) : (
                 <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-sm font-semibold text-emerald-900">You are already on the highest plan</p>
+                  <p className="text-sm font-semibold text-emerald-900">Your paid plan is already active</p>
                   <p className="mt-1 text-sm text-emerald-800">
-                    Business access is active. Billing tools are still available below if you need to manage it.
+                    Billing tools are still available below if you need to manage your subscription.
                   </p>
                 </div>
               )}
+              {currentTier === "free" ? (
+                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-900">$5 add-on analyses</p>
+                  <p className="mt-1 text-sm text-amber-800">
+                    We can support pay-as-you-go analyses for free users next. The pricing is reflected in the product
+                    messaging, but checkout for add-ons is not wired yet.
+                  </p>
+                </div>
+              ) : null}
               <Button variant="outline" className="w-full justify-start gap-2" onClick={handleManageBilling}>
                 <CreditCard className="h-4 w-4" />
                 Open billing portal

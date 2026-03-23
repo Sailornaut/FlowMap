@@ -32,7 +32,7 @@ export default function AuthScreen() {
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Sign in to TrafficScout</h1>
         <p className="text-sm text-muted-foreground mt-3">
-          Free accounts get limited monthly analyses. Paid plans unlock higher quotas and billing tools.
+          Free accounts include 3 total analyses. Pro unlocks unlimited analyses and billing tools.
         </p>
 
         {!authConfigured ? (

@@ -609,11 +609,37 @@ export default function Landing() {
           <div className="mx-auto max-w-7xl rounded-[36px] border border-white/70 bg-[linear-gradient(135deg,#091E31_0%,#123655_50%,#177F64_140%)] px-8 py-16 text-white shadow-[0_34px_90px_rgba(9,30,49,0.20)]">
             <Reveal>
               <InvertedSectionHeading
-                eyebrow="Why Teams Switch"
-                title="Scout your next location with confidence"
-                body="Join the waitlist and see how TrafficScout turns movement into smarter business decisions."
+                eyebrow="Pricing"
+                title="Simple pricing for smarter location decisions"
+                body="Start with 3 free analyses, upgrade to unlimited for $9/month, or add extra runs when you need them."
               />
             </Reveal>
+
+            <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">
+              {[
+                {
+                  title: "Free",
+                  price: "$0",
+                  detail: "3 analyses total",
+                  note: "$5 per additional analysis available as an add-on.",
+                },
+                {
+                  title: "Pro",
+                  price: "$9/month",
+                  detail: "Unlimited analyses",
+                  note: "Built for active scouting and ongoing location evaluation.",
+                },
+              ].map((plan, index) => (
+                <Reveal key={plan.title} delay={0.08 + index * 0.08}>
+                  <div className="rounded-[28px] border border-white/12 bg-white/10 p-6 shadow-[0_22px_60px_rgba(9,30,49,0.12)] backdrop-blur">
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#8DE7BF]">{plan.title}</p>
+                    <p className="mt-4 text-4xl font-bold text-white">{plan.price}</p>
+                    <p className="mt-3 text-lg font-medium text-white/90">{plan.detail}</p>
+                    <p className="mt-4 text-sm leading-7 text-slate-200">{plan.note}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
 
             <div id="cta" className="mx-auto mt-12 max-w-2xl">
               <form className="rounded-[28px] border border-white/10 bg-white/10 p-3 backdrop-blur" onSubmit={(event) => event.preventDefault()}>
@@ -626,7 +652,7 @@ export default function Landing() {
                     className="h-12 rounded-2xl border-white/15 bg-white text-[#091E31] placeholder:text-slate-400"
                   />
                   <Button asChild size="lg" className="h-12 rounded-2xl bg-[#2EC671] px-6 text-[#091E31] hover:bg-[#27b363]">
-                    <RouterLink to="/app">Request Access</RouterLink>
+                    <RouterLink to="/app">Sign In</RouterLink>
                   </Button>
                 </div>
               </form>

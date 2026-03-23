@@ -11,7 +11,7 @@ export const PLAN_CONFIG = {
     label: "Pro",
     totalLimit: null,
     priceLabel: "$9/month",
-    blurb: "Unlimited analyses for teams making location decisions regularly.",
+    blurb: "Built for small businesses that need better location decisions.",
   },
   business: {
     key: "business",

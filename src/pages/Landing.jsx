@@ -627,7 +627,7 @@ export default function Landing() {
                   title: "Pro",
                   price: "$9/month",
                   detail: "Unlimited analyses",
-                  note: "Built for active scouting and ongoing location evaluation.",
+                  note: "Built for small businesses that need better location decisions.",
                 },
               ].map((plan, index) => (
                 <Reveal key={plan.title} delay={0.08 + index * 0.08}>

@@ -314,7 +314,7 @@ export default function Landing() {
 
       <header className="sticky top-0 z-50 border-b border-white/70 bg-[rgba(248,250,252,0.72)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
-          <TrafficScoutLogo compact />
+          <TrafficScoutLogo compact scale={1.5} />
           <nav className="hidden items-center gap-8 lg:flex">
             <NavLink href="#features">Features</NavLink>
             <NavLink href="#how-it-works">How It Works</NavLink>

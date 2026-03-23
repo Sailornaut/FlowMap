@@ -68,7 +68,7 @@ export default function AppLayout() {
           paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
         }}
       >
-        <TrafficScoutLogo compact iconOnly className="mb-3" />
+        <TrafficScoutLogo compact iconOnly variant="mark" className="mb-3" />
         <PlanBadge tier={currentTier} />
 
         {navItems.map((item) => {

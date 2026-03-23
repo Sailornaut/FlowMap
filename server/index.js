@@ -613,6 +613,63 @@ async function syncSubscriptionFromStripe(stripeSubscription) {
   }
 }
 
+async function syncCompletedCheckoutSession(session) {
+  if (!session?.customer || !session?.metadata?.user_id) {
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
+  await supabase
+    .from("profiles")
+    .update({
+      stripe_customer_id: String(session.customer),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", session.metadata.user_id);
+
+  if (session.metadata?.purchase_type === "analysis_addon") {
+    const quantity = Math.max(1, Number(session.metadata?.quantity || 1));
+    const { data: existingCredit } = await supabase
+      .from("usage_events")
+      .select("id")
+      .eq("user_id", session.metadata.user_id)
+      .eq("event_type", "analysis_credit_purchase")
+      .contains("metadata", { stripe_checkout_session_id: session.id })
+      .limit(1)
+      .maybeSingle();
+
+    if (!existingCredit) {
+      await supabase.from("usage_events").insert({
+        user_id: session.metadata.user_id,
+        event_type: "analysis_credit_purchase",
+        metadata: {
+          stripe_checkout_session_id: session.id,
+          quantity,
+        },
+      });
+    }
+
+    return;
+  }
+
+  if (session.subscription) {
+    const stripe = getStripeClient();
+    const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
+    await syncSubscriptionFromStripe(subscription);
+  }
+}
+
+async function getProfileById(userId) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 const analysisSchema = {
   name: "trafficscout_location_analysis",
   strict: true,
@@ -750,7 +807,7 @@ app.post("/api/billing/checkout", async (request, response) => {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
-      success_url: `${siteUrl}/dashboard?checkout=success`,
+      success_url: `${siteUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
       line_items: [
         {
@@ -802,7 +859,7 @@ app.post("/api/billing/addon-checkout", async (request, response) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer: customerId,
-      success_url: `${siteUrl}/dashboard?checkout=success`,
+      success_url: `${siteUrl}/dashboard?checkout=addon-success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
       line_items: [
         {
@@ -821,6 +878,50 @@ app.post("/api/billing/addon-checkout", async (request, response) => {
   } catch (error) {
     reportServerError(error, { route: { path: "/api/billing/addon-checkout", method: "POST" } });
     response.status(500).json({ error: error?.message || "Could not create add-on checkout session." });
+  }
+});
+
+app.get("/api/billing/checkout-status", async (request, response) => {
+  try {
+    const context = await getAuthenticatedContext(request);
+    if (!context) {
+      response.status(401).json({ error: "Sign in required." });
+      return;
+    }
+
+    const sessionId = String(request.query.session_id || "").trim();
+    if (!sessionId) {
+      response.status(400).json({ error: "Missing checkout session id." });
+      return;
+    }
+
+    const stripe = getStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.metadata?.user_id !== context.user.id) {
+      response.status(403).json({ error: "That checkout session does not belong to this account." });
+      return;
+    }
+
+    if (session.status === "complete" && session.payment_status === "paid") {
+      await syncCompletedCheckoutSession(session);
+    }
+
+    const profile = await getProfileById(context.user.id);
+    const subscription = await getLatestSubscription(context.user.id);
+    const tier = deriveBillingTier(profile, subscription);
+    const usage = await getUsageSummary(context.user.id, tier);
+
+    response.json({
+      completed: session.status === "complete",
+      paymentStatus: session.payment_status,
+      checkoutMode: session.mode,
+      tier,
+      usage,
+      subscription,
+    });
+  } catch (error) {
+    reportServerError(error, { route: { path: "/api/billing/checkout-status", method: "GET" } });
+    response.status(500).json({ error: error?.message || "Could not verify checkout session." });
   }
 });
 
@@ -860,39 +961,7 @@ app.post("/api/stripe/webhook", async (request, response) => {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      if (session.customer && session.metadata?.user_id) {
-        const supabase = getSupabaseAdmin();
-        await supabase
-          .from("profiles")
-          .update({
-            stripe_customer_id: String(session.customer),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", session.metadata.user_id);
-
-        if (session.metadata?.purchase_type === "analysis_addon") {
-          const quantity = Math.max(1, Number(session.metadata?.quantity || 1));
-          const { data: existingCredit } = await supabase
-            .from("usage_events")
-            .select("id")
-            .eq("user_id", session.metadata.user_id)
-            .eq("event_type", "analysis_credit_purchase")
-            .contains("metadata", { stripe_checkout_session_id: session.id })
-            .limit(1)
-            .maybeSingle();
-
-          if (!existingCredit) {
-            await supabase.from("usage_events").insert({
-              user_id: session.metadata.user_id,
-              event_type: "analysis_credit_purchase",
-              metadata: {
-                stripe_checkout_session_id: session.id,
-                quantity,
-              },
-            });
-          }
-        }
-      }
+      await syncCompletedCheckoutSession(session);
     }
 
     if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {

@@ -327,7 +327,7 @@ export default function Landing() {
               <RouterLink to="/app">View Demo</RouterLink>
             </Button>
             <Button asChild className="rounded-full bg-[#177F64] px-5 text-white shadow-[0_16px_32px_rgba(23,127,100,0.24)] hover:bg-[#146b56]">
-              <a href="#cta">Get Early Access</a>
+              <RouterLink to="/app">Sign In</RouterLink>
             </Button>
           </div>
         </div>
@@ -348,15 +348,15 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-slate-600 md:text-xl">
-                TrafficScout helps you scout high-value locations using real-world foot traffic insights and predictive analytics.
+                TrafficScout shows real-world movement patterns so you can pick better locations and avoid costly mistakes.
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
                 <Button asChild size="lg" className="rounded-full bg-[#177F64] px-7 text-white shadow-[0_18px_34px_rgba(23,127,100,0.26)] hover:bg-[#146b56]">
-                  <a href="#cta">
-                    Get Early Access
+                  <RouterLink to="/app">
+                    Sign In
                     <ArrowRight className="h-4 w-4" />
-                  </a>
+                  </RouterLink>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full border-slate-300 bg-white/90 px-7 text-[#091E31] hover:bg-white">
                   <RouterLink to="/app">
@@ -402,6 +402,41 @@ export default function Landing() {
                   >
                     {pill}
                   </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 py-24 lg:px-10">
+          <div className="mx-auto max-w-7xl rounded-[36px] border border-[#091E31]/8 bg-[linear-gradient(135deg,#fff_0%,#f3fbf7_100%)] px-8 py-14 shadow-[0_26px_70px_rgba(9,30,49,0.08)] lg:px-14">
+            <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+              <Reveal>
+                <div className="max-w-xl">
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#177F64]">Why It Matters</p>
+                  <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#091E31] md:text-5xl">
+                    Choosing the wrong location can cost you everything.
+                  </h2>
+                  <p className="mt-6 text-lg leading-8 text-slate-600">
+                    TrafficScout gives you real data before you commit.
+                  </p>
+                </div>
+              </Reveal>
+
+              <div className="grid gap-4">
+                {[
+                  "You can’t see real foot traffic before opening",
+                  "Bad locations kill businesses",
+                  "Rent is expensive — guessing is risky",
+                ].map((item, index) => (
+                  <Reveal key={item} delay={index * 0.08}>
+                    <div className="flex items-start gap-4 rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-[0_16px_40px_rgba(9,30,49,0.06)]">
+                      <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#091E31] text-white shadow-sm">
+                        <CircleDot className="h-4 w-4" />
+                      </div>
+                      <p className="text-base font-medium leading-7 text-[#091E31] sm:text-lg">{item}</p>
+                    </div>
+                  </Reveal>
                 ))}
               </div>
             </div>

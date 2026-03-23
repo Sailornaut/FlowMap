@@ -1,12 +1,13 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, BarChart3, Bookmark, Search, User, LogOut, Sparkles } from "lucide-react";
+import { BarChart3, Bookmark, Search, User, LogOut, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigation } from "@/lib/NavigationContext";
 import { getAccountSummary, createCheckoutSession } from "@/lib/api-client";
 import { getNextUpgradeTier, getPlanConfig } from "@/lib/plan-config";
+import TrafficScoutLogo from "@/components/brand/TrafficScoutLogo";
 import PageTransition from "./PageTransition";
 import StackHeader from "./StackHeader";
 import { Badge } from "@/components/ui/badge";
@@ -67,9 +68,7 @@ export default function AppLayout() {
           paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
         }}
       >
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center mb-3">
-          <MapPin className="w-5 h-5 text-primary-foreground" />
-        </div>
+        <TrafficScoutLogo compact iconOnly className="mb-3" />
         <PlanBadge tier={currentTier} />
 
         {navItems.map((item) => {

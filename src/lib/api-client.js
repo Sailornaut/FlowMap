@@ -1,6 +1,20 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+function normalizeApiBaseUrl(value) {
+  const trimmed = String(value || "").trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/\/$/, "");
+  }
+
+  return `https://${trimmed.replace(/\/$/, "")}`;
+}
+
+const apiBaseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 function buildApiUrl(path) {
   if (/^https?:\/\//i.test(path)) {

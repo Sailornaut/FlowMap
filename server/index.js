@@ -77,6 +77,7 @@ const PLAN_LIMITS = {
   pro: null,
   business: null,
 };
+const FREE_TIER_INCLUDED_ANALYSES = PLAN_LIMITS.free;
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
 const hasRedisConfig = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
@@ -475,7 +476,26 @@ async function getUsageSummary(userId, tier) {
   }
 
   const used = count || 0;
-  const limit = PLAN_LIMITS[tier] ?? PLAN_LIMITS.free;
+  let purchasedCredits = 0;
+
+  if (tier === "free") {
+    const { data: creditEvents, error: creditError } = await supabase
+      .from("usage_events")
+      .select("metadata")
+      .eq("user_id", userId)
+      .eq("event_type", "analysis_credit_purchase");
+
+    if (creditError) {
+      throw creditError;
+    }
+
+    purchasedCredits = (creditEvents || []).reduce((sum, event) => {
+      const quantity = Number(event?.metadata?.quantity ?? 1);
+      return sum + (Number.isFinite(quantity) ? quantity : 1);
+    }, 0);
+  }
+
+  const limit = tier === "free" ? FREE_TIER_INCLUDED_ANALYSES + purchasedCredits : PLAN_LIMITS[tier] ?? PLAN_LIMITS.free;
   const isUnlimited = limit === null;
 
   return {
@@ -483,6 +503,8 @@ async function getUsageSummary(userId, tier) {
     limit,
     remaining: isUnlimited ? null : Math.max(0, limit - used),
     resetPolicy: tier === "free" ? "lifetime" : "unlimited",
+    included: tier === "free" ? FREE_TIER_INCLUDED_ANALYSES : null,
+    purchasedCredits: tier === "free" ? purchasedCredits : null,
   };
 }
 
@@ -506,6 +528,10 @@ function getTierPriceId(plan) {
   }
 
   return null;
+}
+
+function getAddonPriceId() {
+  return process.env.STRIPE_PRICE_ANALYSIS_ADDON || null;
 }
 
 async function ensureStripeCustomer(profile, user) {
@@ -752,6 +778,52 @@ app.post("/api/billing/checkout", async (request, response) => {
   }
 });
 
+app.post("/api/billing/addon-checkout", async (request, response) => {
+  try {
+    const context = await getAuthenticatedContext(request);
+    if (!context) {
+      response.status(401).json({ error: "Sign in required." });
+      return;
+    }
+
+    if (context.tier !== "free") {
+      response.status(400).json({ error: "Add-on analyses are only available on the free tier." });
+      return;
+    }
+
+    const priceId = getAddonPriceId();
+    if (!priceId) {
+      response.status(500).json({ error: "Add-on pricing is not configured." });
+      return;
+    }
+
+    const stripe = getStripeClient();
+    const customerId = await ensureStripeCustomer(context.profile, context.user);
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer: customerId,
+      success_url: `${siteUrl}/dashboard?checkout=success`,
+      cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        user_id: context.user.id,
+        purchase_type: "analysis_addon",
+        quantity: "1",
+      },
+    });
+
+    response.json({ url: session.url });
+  } catch (error) {
+    reportServerError(error, { route: { path: "/api/billing/addon-checkout", method: "POST" } });
+    response.status(500).json({ error: error?.message || "Could not create add-on checkout session." });
+  }
+});
+
 app.post("/api/billing/portal", async (request, response) => {
   try {
     const context = await getAuthenticatedContext(request);
@@ -797,6 +869,29 @@ app.post("/api/stripe/webhook", async (request, response) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", session.metadata.user_id);
+
+        if (session.metadata?.purchase_type === "analysis_addon") {
+          const quantity = Math.max(1, Number(session.metadata?.quantity || 1));
+          const { data: existingCredit } = await supabase
+            .from("usage_events")
+            .select("id")
+            .eq("user_id", session.metadata.user_id)
+            .eq("event_type", "analysis_credit_purchase")
+            .contains("metadata", { stripe_checkout_session_id: session.id })
+            .limit(1)
+            .maybeSingle();
+
+          if (!existingCredit) {
+            await supabase.from("usage_events").insert({
+              user_id: session.metadata.user_id,
+              event_type: "analysis_credit_purchase",
+              metadata: {
+                stripe_checkout_session_id: session.id,
+                quantity,
+              },
+            });
+          }
+        }
       }
     }
 

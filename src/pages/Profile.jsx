@@ -2,7 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { CreditCard, Loader2, LogOut, Sparkles, User, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
-import { createCheckoutSession, createPortalSession, getAccountSummary } from "@/lib/api-client";
+import {
+  createAddonCheckoutSession,
+  createCheckoutSession,
+  createPortalSession,
+  getAccountSummary,
+} from "@/lib/api-client";
 import { getPlanConfig } from "@/lib/plan-config";
 import DeleteAccountModal from "@/components/layout/DeleteAccountModal";
 import { Badge } from "@/components/ui/badge";
@@ -46,10 +51,20 @@ export default function Profile() {
     }
   };
 
+  const handleAddonCheckout = async () => {
+    try {
+      const result = await createAddonCheckoutSession();
+      window.location.assign(result.url);
+    } catch (error) {
+      toast.error(error.message || "Could not start add-on checkout.");
+    }
+  };
+
   const usageUsed = account?.usage?.used ?? 0;
   const usageLimit = account?.usage?.limit ?? currentPlan.totalLimit;
   const usageLabel = usageLimit === null ? "Unlimited" : usageLimit;
   const usagePercent = usageLimit === null ? 0 : Math.min(100, (usageUsed / Math.max(1, usageLimit || 1)) * 100);
+  const purchasedCredits = account?.usage?.purchasedCredits ?? 0;
 
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
@@ -134,9 +149,15 @@ export default function Profile() {
                       {usageLimit === null ? (
                         <p className="mt-1 text-sm text-slate-600">Unlimited analyses are active on your plan.</p>
                       ) : (
-                        <p className="mt-1 text-sm text-slate-600">
-                          {usageUsed} of {usageLimit} total analyses used
-                        </p>
+                        <div className="mt-1 text-sm text-slate-600">
+                          <p>{usageUsed} of {usageLimit} total analyses used</p>
+                          {currentTier === "free" ? (
+                            <p className="mt-1">
+                              Includes 3 free analyses and {purchasedCredits} purchased add-on
+                              {purchasedCredits === 1 ? "" : "s"}.
+                            </p>
+                          ) : null}
+                        </div>
                       )}
                     </div>
                     {usageLimit === null ? (
@@ -202,9 +223,12 @@ export default function Profile() {
                 <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
                   <p className="text-sm font-semibold text-amber-900">$5 add-on analyses</p>
                   <p className="mt-1 text-sm text-amber-800">
-                    We can support pay-as-you-go analyses for free users next. The pricing is reflected in the product
-                    messaging, but checkout for add-ons is not wired yet.
+                    Buy one extra analysis at a time without moving to Pro.
                   </p>
+                  <Button className="mt-4 gap-2" variant="outline" onClick={handleAddonCheckout}>
+                    <CreditCard className="h-4 w-4" />
+                    Buy 1 analysis for $5
+                  </Button>
                 </div>
               ) : null}
               <Button variant="outline" className="w-full justify-start gap-2" onClick={handleManageBilling}>

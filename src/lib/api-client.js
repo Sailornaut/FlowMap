@@ -85,6 +85,19 @@ export async function createCheckoutSession(plan) {
   return payload;
 }
 
+export async function createAddonCheckoutSession() {
+  const response = await apiFetch("/api/billing/addon-checkout", {
+    method: "POST",
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not create add-on checkout session.");
+  }
+
+  return payload;
+}
+
 export async function createPortalSession() {
   const response = await apiFetch("/api/billing/portal", {
     method: "POST",

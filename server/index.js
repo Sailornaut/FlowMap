@@ -23,11 +23,33 @@ if (sentryDsn) {
 const app = express();
 const port = Number(process.env.PORT || 8787);
 const siteUrl = process.env.VITE_SITE_URL || "http://localhost:5173";
+function expandOriginVariants(origin) {
+  try {
+    const url = new URL(origin);
+    const variants = new Set([url.origin]);
+
+    if (url.hostname.startsWith("www.")) {
+      variants.add(`${url.protocol}//${url.hostname.replace(/^www\./, "")}`);
+    } else if (url.hostname.includes(".")) {
+      variants.add(`${url.protocol}//www.${url.hostname}`);
+    }
+
+    return [...variants];
+  } catch {
+    return [];
+  }
+}
+
 const configuredOrigins = (process.env.ALLOWED_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-const allowedOrigins = new Set([siteUrl, "http://localhost:5173", "http://127.0.0.1:5173", ...configuredOrigins]);
+const allowedOrigins = new Set([
+  ...expandOriginVariants(siteUrl),
+  ...configuredOrigins.flatMap(expandOriginVariants),
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
 const CACHE_TTL_MS = Number(process.env.ANALYSIS_CACHE_TTL_MS || 1000 * 60 * 60 * 24 * 7);
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 1000 * 60 * 60);
 const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 15);

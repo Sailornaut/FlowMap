@@ -21,6 +21,7 @@ export default function Profile() {
     staleTime: 1000 * 30,
   });
   const currentTier = account?.tier || currentUser?.billing_tier || "free";
+  const currentPlan = getPlanConfig(currentTier);
   const availableUpgrades =
     currentTier === "free"
       ? ["pro", "business"]
@@ -47,7 +48,7 @@ export default function Profile() {
   };
 
   const usageUsed = account?.usage?.used ?? 0;
-  const usageLimit = account?.usage?.limit ?? 0;
+  const usageLimit = account?.usage?.limit ?? currentPlan.monthlyLimit;
   const usagePercent = Math.min(100, (usageUsed / Math.max(1, usageLimit || 1)) * 100);
 
   return (
@@ -176,7 +177,7 @@ export default function Profile() {
                 <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4">
                   <p className="text-sm font-semibold text-emerald-900">You are already on the highest plan</p>
                   <p className="mt-1 text-sm text-emerald-800">
-                    Premium access is active. Billing tools are still available below if you need to manage it.
+                    Business access is active. Billing tools are still available below if you need to manage it.
                   </p>
                 </div>
               )}

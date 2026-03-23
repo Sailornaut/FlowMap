@@ -1,13 +1,14 @@
 import { motion } from "framer-motion";
+import logoAsset from "@/assets/TrafficScoutLogo.png";
 
 export default function TrafficScoutLogo({ compact = false, iconOnly = false, className = "" }) {
   const sizeClasses = iconOnly
     ? compact
-      ? "h-10 w-10"
-      : "h-12 w-12"
+      ? "h-12 w-12"
+      : "h-14 w-14"
     : compact
-      ? "h-12 w-[190px]"
-      : "h-16 w-[260px]";
+      ? "h-14 w-[220px]"
+      : "h-20 w-[320px]";
 
   return (
     <div className={`flex items-center ${className}`}>
@@ -18,9 +19,9 @@ export default function TrafficScoutLogo({ compact = false, iconOnly = false, cl
         className={`relative overflow-hidden rounded-2xl ${sizeClasses}`}
       >
         <img
-          src="/TrafficScoutLogo.png"
+          src={logoAsset}
           alt="TrafficScout"
-          className={`h-full w-full ${iconOnly ? "object-cover object-left" : "object-contain object-left"}`}
+          className={`h-full w-full ${iconOnly ? "object-contain object-center" : "object-contain object-left"}`}
         />
       </motion.div>
     </div>

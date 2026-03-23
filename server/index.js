@@ -495,7 +495,8 @@ async function getUsageSummary(userId, tier) {
     }, 0);
   }
 
-  const limit = tier === "free" ? FREE_TIER_INCLUDED_ANALYSES + purchasedCredits : PLAN_LIMITS[tier] ?? PLAN_LIMITS.free;
+  const hasPlanLimit = Object.prototype.hasOwnProperty.call(PLAN_LIMITS, tier);
+  const limit = tier === "free" ? FREE_TIER_INCLUDED_ANALYSES + purchasedCredits : hasPlanLimit ? PLAN_LIMITS[tier] : PLAN_LIMITS.free;
   const isUnlimited = limit === null;
 
   return {

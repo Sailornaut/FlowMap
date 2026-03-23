@@ -561,7 +561,42 @@ async function ensureStripeCustomer(profile, user) {
   return customer.id;
 }
 
-async function syncSubscriptionFromStripe(stripeSubscription) {
+async function resolveStripeUserId(stripeObject) {
+  const directUserId = stripeObject?.metadata?.user_id || stripeObject?.customer_details?.metadata?.user_id;
+  if (directUserId) {
+    return directUserId;
+  }
+
+  const customerId = stripeObject?.customer ? String(stripeObject.customer) : "";
+  if (!customerId) {
+    return null;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: profileByCustomer, error: profileError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (profileError) {
+    throw profileError;
+  }
+
+  if (profileByCustomer?.id) {
+    return profileByCustomer.id;
+  }
+
+  const stripe = getStripeClient();
+  const customer = await stripe.customers.retrieve(customerId);
+  if (customer && !customer.deleted && customer.metadata?.user_id) {
+    return customer.metadata.user_id;
+  }
+
+  return null;
+}
+
+async function syncSubscriptionFromStripe(stripeSubscription, userIdOverride = null) {
   const supabase = getSupabaseAdmin();
   const stripePriceId = stripeSubscription.items.data[0]?.price?.id;
   const billingTier =
@@ -570,7 +605,7 @@ async function syncSubscriptionFromStripe(stripeSubscription) {
       : stripePriceId === process.env.STRIPE_PRICE_PRO_MONTHLY
         ? "pro"
         : "free";
-  const userId = stripeSubscription.metadata?.user_id || stripeSubscription.customer_details?.metadata?.user_id;
+  const userId = userIdOverride || (await resolveStripeUserId(stripeSubscription));
 
   if (!userId) {
     return;
@@ -655,7 +690,7 @@ async function syncCompletedCheckoutSession(session) {
   if (session.subscription) {
     const stripe = getStripeClient();
     const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
-    await syncSubscriptionFromStripe(subscription);
+    await syncSubscriptionFromStripe(subscription, session.metadata.user_id);
   }
 }
 

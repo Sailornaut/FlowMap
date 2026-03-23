@@ -50,6 +50,23 @@ const allowedOrigins = new Set([
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ]);
+
+function isAllowedOrigin(origin) {
+  if (allowedOrigins.has(origin)) {
+    return true;
+  }
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+    const isLocalhost = protocol === "http:" && (hostname === "localhost" || hostname === "127.0.0.1");
+    const isTrafficScoutDomain =
+      protocol === "https:" && (hostname === "gettrafficscout.com" || hostname.endsWith(".gettrafficscout.com"));
+
+    return isLocalhost || isTrafficScoutDomain;
+  } catch {
+    return false;
+  }
+}
 const CACHE_TTL_MS = Number(process.env.ANALYSIS_CACHE_TTL_MS || 1000 * 60 * 60 * 24 * 7);
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 1000 * 60 * 60);
 const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 15);
@@ -73,11 +90,12 @@ app.use((request, response, next) => {
     return;
   }
 
-  if (allowedOrigins.has(origin)) {
+  if (isAllowedOrigin(origin)) {
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Vary", "Origin");
     response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Stripe-Signature");
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    response.setHeader("Access-Control-Max-Age", "86400");
     response.setHeader(
       "Access-Control-Expose-Headers",
       "X-Cache, X-Plan, X-Usage-Limit, X-Usage-Remaining, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"

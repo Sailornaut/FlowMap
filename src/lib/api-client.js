@@ -40,6 +40,7 @@ async function getAccessToken() {
 export async function apiFetch(path, options = {}) {
   const token = await getAccessToken();
   const headers = new Headers(options.headers || {});
+  const requestUrl = buildApiUrl(path);
 
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
@@ -49,10 +50,14 @@ export async function apiFetch(path, options = {}) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(buildApiUrl(path), {
-    ...options,
-    headers,
-  });
+  try {
+    return await fetch(requestUrl, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    throw new Error(`Failed to fetch (${requestUrl})`, { cause: error });
+  }
 }
 
 export async function getAccountSummary() {

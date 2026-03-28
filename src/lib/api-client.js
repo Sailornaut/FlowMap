@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getSupabaseSession } from "@/lib/supabase";
 
 function normalizeApiBaseUrl(value) {
   const trimmed = String(value || "").trim();
@@ -30,9 +30,7 @@ async function getAccessToken() {
     return null;
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session = await getSupabaseSession();
 
   return session?.access_token || null;
 }

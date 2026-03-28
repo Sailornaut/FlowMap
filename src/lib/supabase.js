@@ -14,3 +14,52 @@ export const supabase = isSupabaseConfigured
       },
     })
   : null;
+
+let cachedSession = null;
+let sessionRequest = null;
+
+async function fetchSessionWithRetry() {
+  if (!supabase) {
+    return null;
+  }
+
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      cachedSession = session;
+      return session;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+
+  throw lastError;
+}
+
+if (supabase) {
+  supabase.auth.onAuthStateChange((_event, session) => {
+    cachedSession = session;
+  });
+}
+
+export async function getSupabaseSession() {
+  if (!supabase) {
+    return null;
+  }
+
+  if (cachedSession) {
+    return cachedSession;
+  }
+
+  if (!sessionRequest) {
+    sessionRequest = fetchSessionWithRetry().finally(() => {
+      sessionRequest = null;
+    });
+  }
+
+  return sessionRequest;
+}

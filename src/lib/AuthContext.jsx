@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getSupabaseSession } from "@/lib/supabase";
 
 const AuthContext = createContext(null);
 const SUPABASE_HASH_KEYS = [
@@ -92,9 +92,7 @@ export function AuthProvider({ children }) {
 
     async function bootstrap() {
       try {
-        const {
-          data: { session: nextSession },
-        } = await supabase.auth.getSession();
+        const nextSession = await getSupabaseSession();
 
         if (!mounted) return;
 

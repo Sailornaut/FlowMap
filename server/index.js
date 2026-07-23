@@ -6,9 +6,27 @@ import * as Sentry from "@sentry/node";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { Redis } from "@upstash/redis";
+import { hasInternalAccess } from "./access-control.js";
+import { validateEnv } from "./env.js";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
+
+// Validate configuration up front (docs/MIGRATION_PLAN.md, Phase 1): a
+// production boot with missing required vars fails immediately instead of
+// throwing lazy 500s on first use; development boots but logs what's missing.
+const envReport = validateEnv(process.env);
+for (const warning of envReport.warnings) {
+  console.warn(`[env] ${warning}`);
+}
+if (envReport.missing.length > 0) {
+  const message = `[env] Missing required environment variables: ${envReport.missing.join(", ")}`;
+  if (envReport.fatal) {
+    console.error(message);
+    process.exit(1);
+  }
+  console.warn(`${message} (continuing because NODE_ENV is not "production")`);
+}
 
 const sentryDsn = process.env.SENTRY_DSN;
 
@@ -1024,6 +1042,17 @@ app.post("/api/analyze", async (request, response) => {
     const context = await getAuthenticatedContext(request);
     if (!context) {
       response.status(401).json({ error: "Sign in required before analyzing locations." });
+      return;
+    }
+
+    // Internal-tool pivot: analysis spends real API budget and is now
+    // restricted to invited staff (profiles.role, migration 0001). A valid
+    // session alone is intentionally not sufficient.
+    if (!hasInternalAccess(context.profile)) {
+      response.status(403).json({
+        error: "Analysis is available to TrafficScout staff accounts only.",
+        code: "internal_access_required",
+      });
       return;
     }
 

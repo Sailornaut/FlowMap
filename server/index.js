@@ -15,6 +15,7 @@ import tenantsRouter from "./routes/tenants.js";
 import vacanciesRouter from "./routes/vacancies.js";
 import analysesRouter from "./routes/analyses.js";
 
+dotenv.config({ path: "trafficscout-api.env" });
 dotenv.config({ path: ".env.local" });
 dotenv.config();
 

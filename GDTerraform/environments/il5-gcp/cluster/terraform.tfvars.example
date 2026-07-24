@@ -1,0 +1,24 @@
+# ==============================================================================
+# GameDay IL5 GCP — App Cluster Variables
+# ==============================================================================
+
+project_id  = "gameday-il5-prod"
+region      = "us-central1"
+environment = "il5"
+domain      = "gameday.dla-lz.us"
+
+# GKE
+cluster_name           = "gameday-app-cluster"
+kubernetes_version     = "1.31"
+enable_private_endpoint = true
+
+# For bastion access to the private API:
+# master_authorized_networks = [
+#   { cidr = "10.0.0.0/20", display_name = "VPC nodes" }
+# ]
+
+# Primary node pool
+primary_machine_type = "e2-standard-4"
+primary_disk_size    = 100
+primary_min_nodes    = 1
+primary_max_nodes    = 3

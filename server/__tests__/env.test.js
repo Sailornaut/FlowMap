@@ -5,6 +5,8 @@ const complete = {
   NODE_ENV: "production",
   VITE_SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-role",
+  VITE_MAPBOX_ACCESS_TOKEN: "pk.test",
+  CENSUS_API_KEY: "test-census-key",
   OPENAI_API_KEY: "sk-test",
   STRIPE_SECRET_KEY: "sk_live",
   STRIPE_WEBHOOK_SECRET: "whsec",
@@ -35,8 +37,8 @@ describe("validateEnv", () => {
   });
 
   it("treats whitespace-only values as missing", () => {
-    const result = validateEnv({ ...complete, OPENAI_API_KEY: "   " });
-    expect(result.missing).toEqual(["OPENAI_API_KEY"]);
+    const result = validateEnv({ ...complete, SUPABASE_SERVICE_ROLE_KEY: "   " });
+    expect(result.missing).toEqual(["SUPABASE_SERVICE_ROLE_KEY"]);
     expect(result.fatal).toBe(true);
   });
 

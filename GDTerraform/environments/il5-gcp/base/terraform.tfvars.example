@@ -1,0 +1,29 @@
+# ==============================================================================
+# GameDay IL5 GCP — Base Layer Variables
+#
+# Copy this to terraform.tfvars and fill in values before applying.
+# ==============================================================================
+
+project_id         = "gameday-il5-prod"
+region             = "us-central1"
+environment        = "il5"
+organization_id    = "123456789012"
+billing_account_id = "AAAAAA-BBBBBB-CCCCCC"
+domain             = "gameday.dla-lz.us"
+
+assured_workloads_parent = "organizations/123456789012"
+
+# Networking
+vpc_cidr          = "10.0.0.0/20"
+pods_cidr         = "10.4.0.0/14"
+services_cidr     = "10.8.0.0/20"
+data_subnet_cidr  = "10.1.0.0/24"
+proxy_only_cidr   = "10.2.0.0/24"
+llm_subnet_cidr   = "10.3.0.0/20"
+llm_pods_cidr     = "10.12.0.0/14"
+llm_services_cidr = "10.16.0.0/20"
+
+# Cloud SQL (Keycloak)
+keycloak_db_tier      = "db-custom-2-7680"
+keycloak_db_ha        = "REGIONAL"
+keycloak_db_disk_size = 20

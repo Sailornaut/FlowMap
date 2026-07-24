@@ -13,12 +13,14 @@
 const REQUIRED_VARS = [
   "VITE_SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
-  "OPENAI_API_KEY",
 ];
 
 /** Feature-scoped: missing values disable a feature but are not fatal. */
 const OPTIONAL_VARS = [
-  "STRIPE_SECRET_KEY", // legacy billing (deprecation planned, Phase 7)
+  "VITE_MAPBOX_ACCESS_TOKEN", // geocoding + isochrone (Phase 3 pipeline)
+  "CENSUS_API_KEY",           // ACS demographic data (free: api.census.gov/data/key_signup.html)
+  "OPENAI_API_KEY",           // legacy /api/analyze (deprecated; not used by new pipeline)
+  "STRIPE_SECRET_KEY",        // legacy billing (deprecation planned, Phase 7)
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRICE_PRO_MONTHLY",
   "STRIPE_PRICE_ANALYSIS_ADDON",

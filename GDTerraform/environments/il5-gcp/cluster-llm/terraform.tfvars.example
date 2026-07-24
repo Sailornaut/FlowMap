@@ -1,0 +1,29 @@
+# ==============================================================================
+# GameDay IL5 GCP — LLM Cluster Variables
+# ==============================================================================
+
+project_id  = "gameday-il5-prod"
+region      = "us-central1"
+environment = "il5"
+
+# GKE LLM Cluster
+cluster_name           = "gameday-llm-cluster"
+kubernetes_version     = "1.31"
+enable_private_endpoint = true
+
+# System node pool
+system_machine_type = "e2-standard-4"
+system_disk_size    = 100
+system_min_nodes    = 1
+system_max_nodes    = 2
+
+# GPU node pool — g2-standard-48 with 4x NVIDIA L4
+# Equivalent to AWS g6.12xlarge with 4x L4
+gpu_enabled       = true
+gpu_machine_type  = "g2-standard-48"
+gpu_type          = "nvidia-l4"
+gpu_count         = 4
+gpu_disk_size     = 500
+gpu_min_nodes     = 0
+gpu_max_nodes     = 2
+gpu_initial_nodes = 1

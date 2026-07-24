@@ -6,6 +6,9 @@
 
 import { Router } from "express";
 import { getSupabaseAdmin } from "../services/supabase-admin.js";
+import { createGeocodingService, createIsochroneService } from "../services/mapbox.js";
+import { createCensusService } from "../services/census.js";
+import { createOverpassService } from "../services/overpass.js";
 import { reportServerError } from "../middleware/error-handler.js";
 import { runPipeline, RUNNER_VERSION } from "../pipeline/runner.js";
 import { ALL_STAGES } from "../pipeline/stages/index.js";
@@ -272,19 +275,45 @@ router.post("/:id/execute", async (req, res) => {
       .update({ status: "running", started_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", run.id);
 
-    // Build pipeline context
-    // NOTE: services (geocoding, isochrone, census, places) will be injected
-    // when live service modules are configured. Without them, stages degrade
-    // gracefully to insufficient confidence.
+    // Build pipeline context with live service clients.
+    // Each factory returns null if its required config is missing — the
+    // corresponding stage degrades gracefully to insufficient confidence.
+    const services = {};
+    const geocoding = createGeocodingService();
+    if (geocoding) services.geocoding = geocoding;
+    const isochrone = createIsochroneService();
+    if (isochrone) services.isochrone = isochrone;
+    const census = createCensusService();
+    if (census) services.census = census;
+    const places = createOverpassService();
+    if (places) services.places = places;
+
     const pipelineCtx = {
       property,
       tenants: tenants || [],
       vacancies: vacancies || [],
       analysisRun: run,
       stageOutputs: {},
-      services: {},
+      services,
       config: {},
     };
+
+    // Pre-load data source IDs (name → uuid) so observations can be linked.
+    // If the data_sources table is empty (migration 0004 not applied), observations
+    // will be skipped with a log warning rather than failing the pipeline.
+    /** @type {Record<string, string>} */
+    const dataSourceIds = {};
+    try {
+      const { data: sources } = await supabase
+        .from("data_sources")
+        .select("id, name")
+        .eq("enabled", true);
+      for (const s of sources || []) {
+        dataSourceIds[s.name] = s.id;
+      }
+    } catch (dsErr) {
+      reportServerError(dsErr, { context: "data_sources lookup (non-fatal)" });
+    }
 
     // Execute pipeline with stage-result persistence callback
     const pipelineResult = await runPipeline(ALL_STAGES, pipelineCtx, {
@@ -309,7 +338,19 @@ router.post("/:id/execute", async (req, res) => {
 
           // Persist source observations
           for (const obs of record.observations) {
-            await supabase.from("source_observations").insert({
+            const sourceId = dataSourceIds[obs.source_name];
+            if (!sourceId) {
+              // source_id is NOT NULL — skip this observation rather than crash.
+              // This happens when migration 0004 hasn't been applied yet.
+              reportServerError(
+                new Error(`No data_source row for "${obs.source_name}" — skipping observation`),
+                { context: "source observation persistence", stage: record.stageName },
+              );
+              continue;
+            }
+
+            const { error: obsErr } = await supabase.from("source_observations").insert({
+              source_id: sourceId,
               source_url_or_id: obs.source_url_or_id,
               retrieved_at: obs.retrieved_at,
               raw_value: obs.raw_value,
@@ -320,6 +361,14 @@ router.post("/:id/execute", async (req, res) => {
               subject_id: run.property_id,
               analysis_run_id: run.id,
             });
+
+            if (obsErr) {
+              reportServerError(obsErr, {
+                context: "source observation insert",
+                stage: record.stageName,
+                source_name: obs.source_name,
+              });
+            }
           }
         } catch (persistErr) {
           // Log but don't fail the pipeline for persistence errors

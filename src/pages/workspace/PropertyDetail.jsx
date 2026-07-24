@@ -162,7 +162,7 @@ export default function PropertyDetail() {
           {property.address && (
             <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
               <MapPin className="w-3.5 h-3.5 shrink-0" />
-              {[property.address, property.city, property.state, property.zip]
+              {[property.address, property.city, property.state, property.postal_code]
                 .filter(Boolean)
                 .join(", ")}
             </div>
@@ -182,12 +182,12 @@ export default function PropertyDetail() {
             </CardContent>
           </Card>
         )}
-        {property.total_sqft && (
+        {property.total_gla_sqft && (
           <Card>
             <CardContent className="pt-4 pb-4">
               <p className="text-xs text-muted-foreground">Total sqft</p>
               <p className="text-sm font-medium mt-0.5">
-                {Number(property.total_sqft).toLocaleString()}
+                {Number(property.total_gla_sqft).toLocaleString()}
               </p>
             </CardContent>
           </Card>

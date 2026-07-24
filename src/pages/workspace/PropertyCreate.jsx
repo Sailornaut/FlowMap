@@ -18,14 +18,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { createProperty } from "@/lib/api-client";
 
 const PROPERTY_TYPES = [
-  "strip_center",
-  "neighborhood_center",
-  "community_center",
-  "power_center",
-  "lifestyle_center",
-  "mixed_use",
-  "standalone",
-  "outlet",
+  "shopping_center",
+  "retail",
+  "office",
+  "mixed",
+  "pad",
   "other",
 ];
 
@@ -38,11 +35,10 @@ export default function PropertyCreate() {
     address: "",
     city: "",
     state: "",
-    zip: "",
+    postal_code: "",
     property_type: "",
-    total_sqft: "",
-    year_built: "",
-    notes: "",
+    total_gla_sqft: "",
+    analyst_notes: "",
   });
 
   const mutation = useMutation({
@@ -60,8 +56,7 @@ export default function PropertyCreate() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const payload = { ...form };
-    if (payload.total_sqft) payload.total_sqft = Number(payload.total_sqft);
-    if (payload.year_built) payload.year_built = Number(payload.year_built);
+    if (payload.total_gla_sqft) payload.total_gla_sqft = Number(payload.total_gla_sqft);
     // Remove empty strings
     for (const [k, v] of Object.entries(payload)) {
       if (v === "") delete payload[k];
@@ -133,17 +128,17 @@ export default function PropertyCreate() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="zip">Zip</Label>
+                <Label htmlFor="postal_code">Zip</Label>
                 <Input
-                  id="zip"
+                  id="postal_code"
                   placeholder="90210"
-                  value={form.zip}
-                  onChange={set("zip")}
+                  value={form.postal_code}
+                  onChange={set("postal_code")}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="property_type">Type</Label>
                 <Select
@@ -166,36 +161,24 @@ export default function PropertyCreate() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="total_sqft">Total sqft</Label>
+                <Label htmlFor="total_gla_sqft">Total sqft</Label>
                 <Input
-                  id="total_sqft"
+                  id="total_gla_sqft"
                   type="number"
                   min={0}
-                  value={form.total_sqft}
-                  onChange={set("total_sqft")}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="year_built">Year built</Label>
-                <Input
-                  id="year_built"
-                  type="number"
-                  min={1800}
-                  max={2030}
-                  value={form.year_built}
-                  onChange={set("year_built")}
+                  value={form.total_gla_sqft}
+                  onChange={set("total_gla_sqft")}
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="analyst_notes">Notes</Label>
               <Textarea
-                id="notes"
+                id="analyst_notes"
                 rows={3}
-                value={form.notes}
-                onChange={set("notes")}
+                value={form.analyst_notes}
+                onChange={set("analyst_notes")}
               />
             </div>
 

@@ -117,7 +117,7 @@ const stage = {
         normalized_value: categorySummary,
         unit: "poi_summary",
         confidence: pois.length > 0 ? "moderate" : "preliminary",
-        reliability_tier: places.providerName === "osm" ? 3 : 2,
+        reliability_tier: places.providerName === "osm_overpass" ? 3 : 2,
       });
 
       const completeness = pois.length > 0 ? Math.min(1, pois.length / 10) : 0;
@@ -133,7 +133,7 @@ const stage = {
         observations,
         confidence: pois.length >= 5 ? "moderate" : pois.length > 0 ? "preliminary" : "insufficient",
         completeness,
-        cost: places.providerName === "osm" ? 0 : 0.01 * Math.ceil(pois.length / 20),
+        cost: places.providerName === "osm_overpass" ? 0 : 0.01 * Math.ceil(pois.length / 20),
       };
     } catch (err) {
       return {

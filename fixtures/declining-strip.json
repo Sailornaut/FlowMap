@@ -1,0 +1,111 @@
+{
+  "_scenario": "Declining strip center with multiple vacancies and weak evidence",
+  "_purpose": "Tests scoring with low evidence quality, multiple vacancies of varying size, and tenant mix that signals decline",
+  "property": {
+    "name": "Westgate Strip Plaza",
+    "address": "7810 Westgate Dr",
+    "city": "Waterloo",
+    "state": "IA",
+    "postal_code": "50702",
+    "lat": 42.4928,
+    "lng": -92.3426,
+    "property_type": "shopping_center",
+    "center_subtype": "strip",
+    "total_gla_sqft": 28000,
+    "parking_spaces": 95,
+    "status": "active"
+  },
+  "tenants": [
+    {
+      "name": "Dollar General",
+      "category_slug": "general_retail",
+      "unit_label": "1",
+      "sqft": 8500,
+      "is_anchor": true
+    },
+    {
+      "name": "Cedar Valley Nails",
+      "category_slug": "nail_salon",
+      "unit_label": "4",
+      "sqft": 1100,
+      "is_anchor": false
+    },
+    {
+      "name": "Payday Advance",
+      "category_slug": "insurance_tax_office",
+      "unit_label": "5",
+      "sqft": 900,
+      "is_anchor": false
+    }
+  ],
+  "vacancies": [
+    {
+      "unit_label": "2",
+      "sqft": 4200,
+      "asking_rent_psf": 10.00,
+      "rent_basis": "gross",
+      "condition": "shell",
+      "prior_tenant": "Family Video",
+      "prior_category_slug": "entertainment_venue",
+      "placement": "inline",
+      "venting_possible": "unknown",
+      "grease_trap": "unknown",
+      "drive_through": "no",
+      "patio_possible": "no",
+      "data_confidence": "preliminary"
+    },
+    {
+      "unit_label": "3",
+      "sqft": 2400,
+      "asking_rent_psf": 11.50,
+      "rent_basis": "gross",
+      "condition": "second_gen",
+      "prior_tenant": "H&R Block",
+      "prior_category_slug": "insurance_tax_office",
+      "placement": "inline",
+      "venting_possible": "unknown",
+      "grease_trap": "no",
+      "drive_through": "no",
+      "patio_possible": "no",
+      "data_confidence": "moderate"
+    },
+    {
+      "unit_label": "6",
+      "sqft": 1800,
+      "asking_rent_psf": null,
+      "rent_basis": "unknown",
+      "condition": "unknown",
+      "prior_tenant": null,
+      "prior_category_slug": null,
+      "placement": "end_cap",
+      "venting_possible": "unknown",
+      "grease_trap": "unknown",
+      "drive_through": "no",
+      "patio_possible": "unknown",
+      "data_confidence": "insufficient"
+    }
+  ],
+  "evidence": {
+    "_note": "Sparse evidence — reflects declining area with limited data",
+    "localDemandScore": 35,
+    "demographicAlignmentScore": 40,
+    "competitionScore": 75,
+    "tenantMixGapScore": 45,
+    "dataQualityScore": 30
+  },
+  "comparables": [
+    {
+      "rent_psf": 9.00,
+      "rent_basis": "gross",
+      "sqft": 3000,
+      "lease_date": "2024-06-01",
+      "is_asking": true,
+      "source_observation_id": "fixture-comp-010"
+    }
+  ],
+  "expected": {
+    "rent_status": "insufficient_data",
+    "confidence_floor": "preliminary",
+    "notes": "Low data quality and sparse evidence should degrade confidence. Only 1 comparable (asking-only, stale) is insufficient for rent analysis."
+  }
+}

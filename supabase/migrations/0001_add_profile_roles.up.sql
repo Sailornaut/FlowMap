@@ -24,7 +24,7 @@ comment on column public.profiles.role is
 -- Seed the owner as admin. Replace the email if the operator account differs.
 update public.profiles
   set role = 'admin'
-  where email = 'davidshoemaker@gameplan.tech'
+  where email = 'davidshoemaker@gettrafficscout.com'
     and role is null;
 
 insert into public.schema_migrations (version)

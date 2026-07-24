@@ -8,6 +8,12 @@ import { createClient } from "@supabase/supabase-js";
 import { Redis } from "@upstash/redis";
 import { hasInternalAccess } from "./access-control.js";
 import { validateEnv } from "./env.js";
+import { populateAuth, requireAuth, requireStaff } from "./middleware/auth.js";
+import { reportServerError as reportError } from "./middleware/error-handler.js";
+import propertiesRouter from "./routes/properties.js";
+import tenantsRouter from "./routes/tenants.js";
+import vacanciesRouter from "./routes/vacancies.js";
+import analysesRouter from "./routes/analyses.js";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -1157,6 +1163,17 @@ app.post("/api/analyze", async (request, response) => {
   }
 });
 
+// ============================================================================
+// New internal workspace routes (Phase 2+)
+// ============================================================================
+app.use("/api/properties", populateAuth, requireAuth, requireStaff, propertiesRouter);
+app.use("/api/properties/:propertyId/tenants", populateAuth, requireAuth, requireStaff, tenantsRouter);
+app.use("/api/properties/:propertyId/vacancies", populateAuth, requireAuth, requireStaff, vacanciesRouter);
+app.use("/api/analyses", populateAuth, requireAuth, requireStaff, analysesRouter);
+
+// ============================================================================
+// Error handler (must be last)
+// ============================================================================
 app.use((error, request, response, _next) => {
   reportServerError(error, {
     route: {

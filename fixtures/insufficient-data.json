@@ -1,0 +1,46 @@
+{
+  "_scenario": "Property with minimal information — tests confidence degradation",
+  "_purpose": "Tests that scoring and rent analysis degrade gracefully when evidence is sparse or missing. Confidence must never exceed 'preliminary' with this little data. Rent analysis must return 'insufficient_data'.",
+  "property": {
+    "name": "Highway 30 Retail",
+    "address": "12400 US-30",
+    "city": "Marshalltown",
+    "state": "IA",
+    "postal_code": "50158",
+    "lat": 42.0494,
+    "lng": -92.9080,
+    "property_type": "retail",
+    "center_subtype": null,
+    "total_gla_sqft": null,
+    "parking_spaces": null,
+    "status": "prospect"
+  },
+  "tenants": [],
+  "vacancies": [
+    {
+      "unit_label": "1",
+      "sqft": null,
+      "asking_rent_psf": null,
+      "rent_basis": "unknown",
+      "condition": "unknown",
+      "prior_tenant": null,
+      "prior_category_slug": null,
+      "placement": "unknown",
+      "venting_possible": "unknown",
+      "grease_trap": "unknown",
+      "drive_through": "unknown",
+      "patio_possible": "unknown",
+      "data_confidence": "insufficient"
+    }
+  ],
+  "evidence": {
+    "_note": "Almost no evidence collected — only a data quality score reflecting the gap"
+  },
+  "comparables": [],
+  "expected": {
+    "rent_status": "insufficient_data",
+    "confidence_ceiling": "preliminary",
+    "scoring_completeness_below": 0.3,
+    "notes": "With no evidence scores, no comparables, no sqft, and all physical attributes unknown, both scoring and rent analysis must degrade to their lowest-confidence outputs. This fixture guards against the system inventing data to fill gaps."
+  }
+}

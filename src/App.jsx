@@ -6,6 +6,7 @@ import { queryClientInstance } from "@/lib/query-client";
 import PageNotFound from "@/lib/PageNotFound";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
+import WorkspaceLayout from "@/components/layout/WorkspaceLayout";
 import { NavigationProvider } from "@/lib/NavigationContext";
 import AuthScreen from "@/components/auth/AuthScreen";
 import Landing from "@/pages/Landing";
@@ -15,6 +16,14 @@ const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const SavedLocations = lazy(() => import("@/pages/SavedLocations"));
 
+// Workspace pages (Phase 4)
+const WorkspaceOverview = lazy(() => import("@/pages/workspace/WorkspaceOverview"));
+const PropertyList = lazy(() => import("@/pages/workspace/PropertyList"));
+const PropertyCreate = lazy(() => import("@/pages/workspace/PropertyCreate"));
+const PropertyDetail = lazy(() => import("@/pages/workspace/PropertyDetail"));
+const AnalysisList = lazy(() => import("@/pages/workspace/AnalysisList"));
+const AnalysisDetail = lazy(() => import("@/pages/workspace/AnalysisDetail"));
+
 function PageLoader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center">
@@ -23,7 +32,7 @@ function PageLoader() {
   );
 }
 
-function ProtectedApp() {
+function ProtectedApp({ layout }) {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -36,6 +45,10 @@ function ProtectedApp() {
 
   if (!isAuthenticated) {
     return <AuthScreen />;
+  }
+
+  if (layout === "workspace") {
+    return <WorkspaceLayout />;
   }
 
   return (
@@ -83,6 +96,58 @@ function AppRoutes() {
           }
         />
       </Route>
+      {/* Workspace routes (Phase 4 — internal analyst workspace) */}
+      <Route element={<ProtectedApp layout="workspace" />}>
+        <Route
+          path="/workspace"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <WorkspaceOverview />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/properties"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <PropertyList />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/properties/new"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <PropertyCreate />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/properties/:id"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <PropertyDetail />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/analyses"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AnalysisList />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/analyses/:id"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AnalysisDetail />
+            </Suspense>
+          }
+        />
+      </Route>
+
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

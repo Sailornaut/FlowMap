@@ -1,0 +1,137 @@
+{
+  "_scenario": "Healthy grocery-anchored neighborhood center with low vacancy",
+  "_purpose": "Tests scoring with strong evidence, diverse tenant mix, and a single small vacancy well-suited for food/service backfill",
+  "property": {
+    "name": "Oakdale Village Center",
+    "address": "4200 Oakdale Blvd",
+    "city": "Cedar Rapids",
+    "state": "IA",
+    "postal_code": "52402",
+    "lat": 42.0083,
+    "lng": -91.6441,
+    "property_type": "shopping_center",
+    "center_subtype": "neighborhood",
+    "total_gla_sqft": 78000,
+    "parking_spaces": 310,
+    "status": "active"
+  },
+  "tenants": [
+    {
+      "name": "FreshMart Grocery",
+      "category_slug": "grocery_anchor",
+      "unit_label": "A-100",
+      "sqft": 42000,
+      "is_anchor": true
+    },
+    {
+      "name": "Great Clips",
+      "category_slug": "salon_spa",
+      "unit_label": "B-101",
+      "sqft": 1200,
+      "is_anchor": false
+    },
+    {
+      "name": "Dragon Wok Express",
+      "category_slug": "quick_service_restaurant",
+      "unit_label": "B-102",
+      "sqft": 1800,
+      "is_anchor": false
+    },
+    {
+      "name": "Heartland Dry Cleaners",
+      "category_slug": "dry_cleaner_laundry",
+      "unit_label": "B-103",
+      "sqft": 1400,
+      "is_anchor": false
+    },
+    {
+      "name": "Anytime Fitness",
+      "category_slug": "fitness_center",
+      "unit_label": "C-200",
+      "sqft": 6500,
+      "is_anchor": false
+    },
+    {
+      "name": "Midwest Family Dentistry",
+      "category_slug": "dental_practice",
+      "unit_label": "C-201",
+      "sqft": 2400,
+      "is_anchor": false
+    },
+    {
+      "name": "H&R Block",
+      "category_slug": "insurance_tax_office",
+      "unit_label": "B-104",
+      "sqft": 1100,
+      "is_anchor": false
+    },
+    {
+      "name": "Verizon Wireless",
+      "category_slug": "specialty_retail_general",
+      "unit_label": "B-105",
+      "sqft": 1600,
+      "is_anchor": false
+    }
+  ],
+  "vacancies": [
+    {
+      "unit_label": "B-106",
+      "sqft": 1500,
+      "asking_rent_psf": 22.00,
+      "rent_basis": "nnn",
+      "condition": "second_gen",
+      "prior_tenant": "Subway",
+      "prior_category_slug": "quick_service_restaurant",
+      "placement": "inline",
+      "venting_possible": "yes",
+      "grease_trap": "yes",
+      "drive_through": "no",
+      "patio_possible": "no",
+      "data_confidence": "high"
+    }
+  ],
+  "evidence": {
+    "_note": "Synthetic scores for test purposes — not fabricated external data",
+    "localDemandScore": 78,
+    "demographicAlignmentScore": 72,
+    "trafficAlignmentScore": 65,
+    "daypartAlignmentScore": 70,
+    "competitionScore": 60,
+    "tenantMixGapScore": 85,
+    "cotenancySynergyScore": 68,
+    "marketGrowthScore": 55,
+    "dataQualityScore": 75
+  },
+  "comparables": [
+    {
+      "rent_psf": 20.50,
+      "rent_basis": "nnn",
+      "sqft": 1400,
+      "lease_date": "2025-11-15",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-001"
+    },
+    {
+      "rent_psf": 23.00,
+      "rent_basis": "nnn",
+      "sqft": 1600,
+      "lease_date": "2026-02-01",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-002"
+    },
+    {
+      "rent_psf": 21.75,
+      "rent_basis": "nnn",
+      "sqft": 1500,
+      "lease_date": "2025-08-10",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-003"
+    }
+  ],
+  "expected": {
+    "rent_status": "supported",
+    "top_category_candidates": ["coffee_shop", "fast_casual_restaurant", "specialty_food_market"],
+    "disqualified_categories": [],
+    "confidence_floor": "moderate"
+  }
+}

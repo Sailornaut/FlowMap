@@ -1,0 +1,115 @@
+{
+  "_scenario": "Vacancy whose physical constraints disqualify food-service categories",
+  "_purpose": "Tests that checkDisqualifiers correctly zeros out food-service categories when venting and grease trap are definitively unavailable, while non-food categories score normally.",
+  "property": {
+    "name": "Riverside Commons",
+    "address": "900 River Rd",
+    "city": "Iowa City",
+    "state": "IA",
+    "postal_code": "52240",
+    "lat": 41.6611,
+    "lng": -91.5302,
+    "property_type": "shopping_center",
+    "center_subtype": "strip",
+    "total_gla_sqft": 22000,
+    "parking_spaces": 80,
+    "status": "active"
+  },
+  "tenants": [
+    {
+      "name": "Prairie Lights Coffee",
+      "category_slug": "coffee_shop",
+      "unit_label": "A",
+      "sqft": 1400,
+      "is_anchor": false
+    },
+    {
+      "name": "Sport Clips",
+      "category_slug": "salon_spa",
+      "unit_label": "B",
+      "sqft": 1200,
+      "is_anchor": false
+    },
+    {
+      "name": "Hawkeye Urgent Care",
+      "category_slug": "urgent_care",
+      "unit_label": "C",
+      "sqft": 4000,
+      "is_anchor": false
+    }
+  ],
+  "vacancies": [
+    {
+      "unit_label": "D",
+      "sqft": 2000,
+      "asking_rent_psf": 20.00,
+      "rent_basis": "nnn",
+      "condition": "second_gen",
+      "prior_tenant": "Cellular Repair Shop",
+      "prior_category_slug": "phone_electronics",
+      "placement": "inline",
+      "venting_possible": "no",
+      "grease_trap": "no",
+      "drive_through": "no",
+      "patio_possible": "yes",
+      "data_confidence": "high"
+    }
+  ],
+  "evidence": {
+    "_note": "Good evidence quality — disqualification is physical, not data-related",
+    "localDemandScore": 75,
+    "demographicAlignmentScore": 70,
+    "trafficAlignmentScore": 68,
+    "daypartAlignmentScore": 65,
+    "competitionScore": 58,
+    "tenantMixGapScore": 72,
+    "cotenancySynergyScore": 60,
+    "marketGrowthScore": 62,
+    "dataQualityScore": 78
+  },
+  "comparables": [
+    {
+      "rent_psf": 19.00,
+      "rent_basis": "nnn",
+      "sqft": 1800,
+      "lease_date": "2026-01-20",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-050"
+    },
+    {
+      "rent_psf": 21.50,
+      "rent_basis": "nnn",
+      "sqft": 2200,
+      "lease_date": "2025-11-01",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-051"
+    },
+    {
+      "rent_psf": 20.00,
+      "rent_basis": "nnn",
+      "sqft": 2000,
+      "lease_date": "2026-04-10",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-052"
+    }
+  ],
+  "expected": {
+    "rent_status": "supported",
+    "disqualified_categories": [
+      "quick_service_restaurant",
+      "fast_casual_restaurant",
+      "full_service_restaurant"
+    ],
+    "disqualification_reasons": [
+      "Venting required but not available",
+      "Grease trap required but not available"
+    ],
+    "non_disqualified_candidates": [
+      "salon_spa",
+      "insurance_tax_office",
+      "dry_cleaner_laundry",
+      "specialty_retail_general"
+    ],
+    "notes": "Venting=no and grease_trap=no means all categories with those physical requirements score 0. Categories without those requirements should score normally with high evidence quality."
+  }
+}

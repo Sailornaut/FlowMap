@@ -1,0 +1,118 @@
+{
+  "_scenario": "Small office property (non-retail)",
+  "_purpose": "Tests scoring for office-type categories. No food-service physical requirements relevant. Different scoring dynamics — daytime population matters, residential density less so.",
+  "property": {
+    "name": "Prairie Professional Park",
+    "address": "320 Commerce St, Suite 100",
+    "city": "West Des Moines",
+    "state": "IA",
+    "postal_code": "50265",
+    "lat": 41.5770,
+    "lng": -93.7113,
+    "property_type": "office",
+    "center_subtype": null,
+    "total_gla_sqft": 12000,
+    "parking_spaces": 48,
+    "status": "active"
+  },
+  "tenants": [
+    {
+      "name": "Heartland Financial Advisors",
+      "category_slug": "bank_credit_union",
+      "unit_label": "101",
+      "sqft": 2200,
+      "is_anchor": false
+    },
+    {
+      "name": "Prairie Law Group",
+      "category_slug": "office_professional",
+      "unit_label": "102",
+      "sqft": 3000,
+      "is_anchor": false
+    },
+    {
+      "name": "Midwest IT Solutions",
+      "category_slug": "office_professional",
+      "unit_label": "103",
+      "sqft": 2800,
+      "is_anchor": false
+    }
+  ],
+  "vacancies": [
+    {
+      "unit_label": "104",
+      "sqft": 1800,
+      "asking_rent_psf": 15.00,
+      "rent_basis": "gross",
+      "condition": "built_out",
+      "prior_tenant": "State Farm Insurance",
+      "prior_category_slug": "insurance_tax_office",
+      "placement": "inline",
+      "venting_possible": "no",
+      "grease_trap": "no",
+      "drive_through": "no",
+      "patio_possible": "no",
+      "data_confidence": "high"
+    },
+    {
+      "unit_label": "105",
+      "sqft": 2200,
+      "asking_rent_psf": 14.50,
+      "rent_basis": "gross",
+      "condition": "built_out",
+      "prior_tenant": "CPA Office",
+      "prior_category_slug": "insurance_tax_office",
+      "placement": "inline",
+      "venting_possible": "no",
+      "grease_trap": "no",
+      "drive_through": "no",
+      "patio_possible": "no",
+      "data_confidence": "high"
+    }
+  ],
+  "evidence": {
+    "_note": "Strong daytime population, office corridor location",
+    "localDemandScore": 60,
+    "demographicAlignmentScore": 55,
+    "trafficAlignmentScore": 50,
+    "daypartAlignmentScore": 65,
+    "competitionScore": 50,
+    "tenantMixGapScore": 40,
+    "cotenancySynergyScore": 55,
+    "marketGrowthScore": 45,
+    "dataQualityScore": 65
+  },
+  "comparables": [
+    {
+      "rent_psf": 14.00,
+      "rent_basis": "gross",
+      "sqft": 2000,
+      "lease_date": "2025-10-01",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-030"
+    },
+    {
+      "rent_psf": 16.00,
+      "rent_basis": "gross",
+      "sqft": 1800,
+      "lease_date": "2026-03-15",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-031"
+    },
+    {
+      "rent_psf": 13.50,
+      "rent_basis": "gross",
+      "sqft": 2500,
+      "lease_date": "2025-06-01",
+      "is_asking": true,
+      "source_observation_id": "fixture-comp-032"
+    }
+  ],
+  "expected": {
+    "rent_status": "supported",
+    "top_category_candidates": ["insurance_tax_office", "office_professional"],
+    "disqualified_categories": ["quick_service_restaurant", "fast_casual_restaurant", "full_service_restaurant"],
+    "disqualification_reason": "Venting and grease trap required but not available",
+    "notes": "Office property where all food-service categories with venting/grease requirements are disqualified. Best-fit categories are professional/financial services."
+  }
+}

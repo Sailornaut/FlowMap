@@ -1,0 +1,131 @@
+{
+  "_scenario": "Center dominated by child/family-oriented tenants",
+  "_purpose": "Tests tenant mix gap analysis — most categories in childcare/education sector means gap for food, personal services, or fitness. Also tests cotenancy synergy scoring.",
+  "property": {
+    "name": "KidZone Family Center",
+    "address": "1550 Family Pkwy",
+    "city": "Ankeny",
+    "state": "IA",
+    "postal_code": "50023",
+    "lat": 41.7318,
+    "lng": -93.6001,
+    "property_type": "shopping_center",
+    "center_subtype": "neighborhood",
+    "total_gla_sqft": 35000,
+    "parking_spaces": 150,
+    "status": "active"
+  },
+  "tenants": [
+    {
+      "name": "Little Explorers Academy",
+      "category_slug": "childcare_center",
+      "unit_label": "A-1",
+      "sqft": 6500,
+      "is_anchor": true
+    },
+    {
+      "name": "Tumble Town Gymnastics",
+      "category_slug": "kids_activity_center",
+      "unit_label": "A-2",
+      "sqft": 5000,
+      "is_anchor": false
+    },
+    {
+      "name": "Kumon Learning Center",
+      "category_slug": "tutoring_enrichment",
+      "unit_label": "B-1",
+      "sqft": 1500,
+      "is_anchor": false
+    },
+    {
+      "name": "Iowa Pediatric Associates",
+      "category_slug": "medical_office",
+      "unit_label": "B-2",
+      "sqft": 3200,
+      "is_anchor": false
+    },
+    {
+      "name": "Smile Kids Dentistry",
+      "category_slug": "dental_practice",
+      "unit_label": "B-3",
+      "sqft": 2200,
+      "is_anchor": false
+    },
+    {
+      "name": "Once Upon a Child",
+      "category_slug": "specialty_retail_general",
+      "unit_label": "C-1",
+      "sqft": 3500,
+      "is_anchor": false
+    }
+  ],
+  "vacancies": [
+    {
+      "unit_label": "C-2",
+      "sqft": 1800,
+      "asking_rent_psf": 18.50,
+      "rent_basis": "nnn",
+      "condition": "second_gen",
+      "prior_tenant": "Smoothie King",
+      "prior_category_slug": "coffee_shop",
+      "placement": "end_cap",
+      "venting_possible": "yes",
+      "grease_trap": "no",
+      "drive_through": "no",
+      "patio_possible": "yes",
+      "data_confidence": "high"
+    },
+    {
+      "unit_label": "C-3",
+      "sqft": 2500,
+      "asking_rent_psf": 16.00,
+      "rent_basis": "nnn",
+      "condition": "white_box",
+      "prior_tenant": null,
+      "prior_category_slug": null,
+      "placement": "inline",
+      "venting_possible": "no",
+      "grease_trap": "no",
+      "drive_through": "no",
+      "patio_possible": "no",
+      "data_confidence": "high"
+    }
+  ],
+  "evidence": {
+    "_note": "Family-rich area with strong daytime population from nearby schools",
+    "localDemandScore": 70,
+    "demographicAlignmentScore": 80,
+    "trafficAlignmentScore": 55,
+    "daypartAlignmentScore": 72,
+    "competitionScore": 65,
+    "tenantMixGapScore": 90,
+    "cotenancySynergyScore": 75,
+    "marketGrowthScore": 60,
+    "dataQualityScore": 70
+  },
+  "comparables": [
+    {
+      "rent_psf": 17.00,
+      "rent_basis": "nnn",
+      "sqft": 2000,
+      "lease_date": "2026-01-10",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-020"
+    },
+    {
+      "rent_psf": 19.50,
+      "rent_basis": "nnn",
+      "sqft": 1600,
+      "lease_date": "2025-09-20",
+      "is_asking": false,
+      "source_observation_id": "fixture-comp-021"
+    }
+  ],
+  "expected": {
+    "rent_status": "supported",
+    "vacancy_c2_top_candidates": ["coffee_shop", "salon_spa"],
+    "vacancy_c3_disqualified": ["quick_service_restaurant", "fast_casual_restaurant"],
+    "vacancy_c3_disqualification_reason": "Venting required but not available",
+    "notes": "C-2 has venting (food/bev possible); C-3 has no venting (food-service disqualified). High tenant-mix-gap score reflects missing food and personal-service sectors."
+  }
+}

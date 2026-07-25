@@ -25,6 +25,11 @@ const AnalysisList = lazy(() => import("@/pages/workspace/AnalysisList"));
 const AnalysisDetail = lazy(() => import("@/pages/workspace/AnalysisDetail"));
 const AnalysisReport = lazy(() => import("@/pages/workspace/AnalysisReport"));
 
+// Phase 7 pages
+const FollowUps = lazy(() => import("@/pages/workspace/FollowUps"));
+const Outcomes = lazy(() => import("@/pages/workspace/Outcomes"));
+const Lessons = lazy(() => import("@/pages/workspace/Lessons"));
+
 function PageLoader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center">
@@ -152,6 +157,30 @@ function AppRoutes() {
           element={
             <Suspense fallback={<PageLoader />}>
               <AnalysisReport />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/follow-ups"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <FollowUps />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/outcomes"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Outcomes />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/lessons"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Lessons />
             </Suspense>
           }
         />

@@ -76,7 +76,6 @@
     "react-hot-toast": "^2.6.0",
     "react-leaflet": "^4.2.1",
     "react-markdown": "^9.0.1",
-    "react-quill": "^2.0.0",
     "react-resizable-panels": "^2.1.7",
     "react-router-dom": "^6.26.0",
     "recharts": "^2.15.4",
@@ -107,6 +106,9 @@
     "typescript": "^5.8.2",
     "vite": "^6.1.0",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "brace-expansion": ">=5.0.8"
   },
   "description": "",
   "main": "vitest.config.js",

@@ -293,3 +293,167 @@ export async function listReports({ property_id, analysis_run_id } = {}) {
 
   return payload;
 }
+
+// ── Follow-ups ──────────────────────────────────────────────────────
+
+export async function listFollowUps({ property_id, analysis_run_id, status, overdue } = {}) {
+  const params = new URLSearchParams();
+  if (property_id) params.set("property_id", property_id);
+  if (analysis_run_id) params.set("analysis_run_id", analysis_run_id);
+  if (status) params.set("status", status);
+  if (overdue) params.set("overdue", "true");
+  const qs = params.toString();
+  const response = await apiFetch(`/api/follow-ups${qs ? `?${qs}` : ""}`);
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not list follow-ups.");
+  return payload;
+}
+
+export async function getFollowUp(id) {
+  const response = await apiFetch(`/api/follow-ups/${id}`);
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not fetch follow-up.");
+  return payload;
+}
+
+export async function createFollowUp(data) {
+  const response = await apiFetch("/api/follow-ups", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not create follow-up.");
+  return payload;
+}
+
+export async function updateFollowUp(id, data) {
+  const response = await apiFetch(`/api/follow-ups/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not update follow-up.");
+  return payload;
+}
+
+export async function generateFollowUps(analysisRunId, propertyId) {
+  const response = await apiFetch("/api/follow-ups/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ analysis_run_id: analysisRunId, property_id: propertyId }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not generate follow-ups.");
+  return payload;
+}
+
+export async function getFollowUpSummary() {
+  const response = await apiFetch("/api/follow-ups/summary");
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not get follow-up summary.");
+  return payload;
+}
+
+// ── Outcomes ────────────────────────────────────────────────────────
+
+export async function listOutcomes({ property_id, analysis_run_id, vacancy_id, follow_up_id, evidence_type } = {}) {
+  const params = new URLSearchParams();
+  if (property_id) params.set("property_id", property_id);
+  if (analysis_run_id) params.set("analysis_run_id", analysis_run_id);
+  if (vacancy_id) params.set("vacancy_id", vacancy_id);
+  if (follow_up_id) params.set("follow_up_id", follow_up_id);
+  if (evidence_type) params.set("evidence_type", evidence_type);
+  const qs = params.toString();
+  const response = await apiFetch(`/api/outcomes${qs ? `?${qs}` : ""}`);
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not list outcomes.");
+  return payload;
+}
+
+export async function createOutcome(data) {
+  const response = await apiFetch("/api/outcomes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not create outcome.");
+  return payload;
+}
+
+export async function updateOutcome(id, data) {
+  const response = await apiFetch(`/api/outcomes/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not update outcome.");
+  return payload;
+}
+
+// ── Lessons ─────────────────────────────────────────────────────────
+
+export async function listLessons({ lesson_type, severity, subject_type, subject_id } = {}) {
+  const params = new URLSearchParams();
+  if (lesson_type) params.set("lesson_type", lesson_type);
+  if (severity) params.set("severity", severity);
+  if (subject_type) params.set("subject_type", subject_type);
+  if (subject_id) params.set("subject_id", subject_id);
+  const qs = params.toString();
+  const response = await apiFetch(`/api/lessons${qs ? `?${qs}` : ""}`);
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not list lessons.");
+  return payload;
+}
+
+export async function getLesson(id) {
+  const response = await apiFetch(`/api/lessons/${id}`);
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not fetch lesson.");
+  return payload;
+}
+
+export async function createLesson(data) {
+  const response = await apiFetch("/api/lessons", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not create lesson.");
+  return payload;
+}
+
+export async function updateLesson(id, data) {
+  const response = await apiFetch(`/api/lessons/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not update lesson.");
+  return payload;
+}
+
+export async function addLessonReferences(lessonId, references) {
+  const response = await apiFetch(`/api/lessons/${lessonId}/references`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ references }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not add references.");
+  return payload;
+}
+
+export async function removeLessonReference(lessonId, refId) {
+  const response = await apiFetch(`/api/lessons/${lessonId}/references/${refId}`, {
+    method: "DELETE",
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not remove reference.");
+  return payload;
+}

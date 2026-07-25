@@ -1,9 +1,12 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
+  BookOpen,
   Building2,
+  CalendarClock,
   FlaskConical,
   LayoutDashboard,
   LogOut,
+  Target,
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +18,9 @@ const navItems = [
   { path: "/workspace", icon: LayoutDashboard, label: "Overview", exact: true },
   { path: "/workspace/properties", icon: Building2, label: "Properties" },
   { path: "/workspace/analyses", icon: FlaskConical, label: "Analyses" },
+  { path: "/workspace/follow-ups", icon: CalendarClock, label: "Follow-ups" },
+  { path: "/workspace/outcomes", icon: Target, label: "Outcomes" },
+  { path: "/workspace/lessons", icon: BookOpen, label: "Lessons" },
 ];
 
 export default function WorkspaceLayout() {

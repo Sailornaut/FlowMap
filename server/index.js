@@ -15,6 +15,9 @@ import tenantsRouter from "./routes/tenants.js";
 import vacanciesRouter from "./routes/vacancies.js";
 import analysesRouter from "./routes/analyses.js";
 import reportsRouter from "./routes/reports.js";
+import followUpsRouter from "./routes/follow-ups.js";
+import outcomesRouter from "./routes/outcomes.js";
+import lessonsRouter from "./routes/lessons.js";
 
 dotenv.config({ path: "trafficscout-api.env" });
 dotenv.config({ path: ".env.local" });
@@ -1173,6 +1176,9 @@ app.use("/api/properties/:propertyId/tenants", populateAuth, requireAuth, requir
 app.use("/api/properties/:propertyId/vacancies", populateAuth, requireAuth, requireStaff, vacanciesRouter);
 app.use("/api/analyses", populateAuth, requireAuth, requireStaff, analysesRouter);
 app.use("/api/reports", populateAuth, requireAuth, requireStaff, reportsRouter);
+app.use("/api/follow-ups", populateAuth, requireAuth, requireStaff, followUpsRouter);
+app.use("/api/outcomes", populateAuth, requireAuth, requireStaff, outcomesRouter);
+app.use("/api/lessons", populateAuth, requireAuth, requireStaff, lessonsRouter);
 
 // ============================================================================
 // Error handler (must be last)

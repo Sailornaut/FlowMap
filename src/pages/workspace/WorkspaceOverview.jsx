@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, FlaskConical, Plus, ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Building2, CalendarClock, FlaskConical, Plus, ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { listProperties, listAnalyses } from "@/lib/api-client";
+import { listProperties, listAnalyses, getFollowUpSummary } from "@/lib/api-client";
 
 const STATUS_BADGE = {
   complete: "default",
@@ -95,9 +95,16 @@ export default function WorkspaceOverview() {
     staleTime: 30_000,
   });
 
+  const { data: followUpSummary, isLoading: fuLoading } = useQuery({
+    queryKey: ["follow-up-summary"],
+    queryFn: getFollowUpSummary,
+    staleTime: 30_000,
+  });
+
   const analyses = analysesData?.analyses || [];
   const completedCount = analyses.filter((a) => a.status === "complete").length;
   const activeCount = analyses.filter((a) => a.status === "running" || a.status === "queued").length;
+  const overdueCount = followUpSummary?.overdue ?? 0;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
@@ -114,7 +121,7 @@ export default function WorkspaceOverview() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <StatCard
           icon={Building2}
           label="Properties"
@@ -140,6 +147,13 @@ export default function WorkspaceOverview() {
           sub={activeCount > 0 ? "running now" : undefined}
           loading={analysesLoading}
         />
+        <StatCard
+          icon={CalendarClock}
+          label="Follow-ups Due"
+          value={overdueCount}
+          sub={overdueCount > 0 ? "overdue" : undefined}
+          loading={fuLoading}
+        />
       </div>
 
       <Card>
@@ -162,7 +176,7 @@ export default function WorkspaceOverview() {
       </Card>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           onClick={() => navigate("/workspace/properties")}
           className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
@@ -181,6 +195,16 @@ export default function WorkspaceOverview() {
           <div>
             <p className="text-sm font-medium">All analyses</p>
             <p className="text-xs text-muted-foreground">Review past analysis runs</p>
+          </div>
+        </button>
+        <button
+          onClick={() => navigate("/workspace/follow-ups")}
+          className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
+        >
+          <CalendarClock className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div>
+            <p className="text-sm font-medium">Follow-ups</p>
+            <p className="text-xs text-muted-foreground">Track milestones and outcomes</p>
           </div>
         </button>
       </div>

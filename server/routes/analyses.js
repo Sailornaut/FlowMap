@@ -12,6 +12,7 @@ import { createOverpassService } from "../services/overpass.js";
 import { reportServerError } from "../middleware/error-handler.js";
 import { runPipeline, RUNNER_VERSION } from "../pipeline/runner.js";
 import { ALL_STAGES } from "../pipeline/stages/index.js";
+import { generateDefaultFollowUps } from "./follow-ups.js";
 
 const router = Router();
 
@@ -537,6 +538,20 @@ router.post("/:id/execute", async (req, res) => {
       })
       .eq("id", run.id);
 
+    // Auto-generate follow-up milestones for completed analyses (non-fatal)
+    let followUpsCreated = 0;
+    if (finalStatus === "complete") {
+      try {
+        followUpsCreated = await generateDefaultFollowUps({
+          analysisRunId: run.id,
+          propertyId: run.property_id,
+          userId: req.user.id,
+        });
+      } catch (fuErr) {
+        console.warn("[analyses] Non-fatal: follow-up generation failed:", fuErr.message);
+      }
+    }
+
     res.json({
       run_id: run.id,
       status: finalStatus,
@@ -552,6 +567,7 @@ router.post("/:id/execute", async (req, res) => {
       totalCost: pipelineResult.totalCost,
       overallConfidence: pipelineResult.overallConfidence,
       dataQualityConfidence: pipelineResult.dataQualityConfidence,
+      followUpsCreated,
     });
   } catch (error) {
     reportServerError(error, { route: { path: `/api/analyses/${req.params.id}/execute`, method: "POST" } });

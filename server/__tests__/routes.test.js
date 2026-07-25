@@ -29,6 +29,27 @@ describe("route modules load without errors", () => {
     const mod = await import("../routes/analyses.js");
     expect(typeof mod.default).toBe("function");
   });
+
+  it("reports router exports a function", async () => {
+    const mod = await import("../routes/reports.js");
+    expect(typeof mod.default).toBe("function");
+  });
+
+  it("follow-ups router exports a function and generateDefaultFollowUps", async () => {
+    const mod = await import("../routes/follow-ups.js");
+    expect(typeof mod.default).toBe("function");
+    expect(typeof mod.generateDefaultFollowUps).toBe("function");
+  });
+
+  it("outcomes router exports a function", async () => {
+    const mod = await import("../routes/outcomes.js");
+    expect(typeof mod.default).toBe("function");
+  });
+
+  it("lessons router exports a function", async () => {
+    const mod = await import("../routes/lessons.js");
+    expect(typeof mod.default).toBe("function");
+  });
 });
 
 describe("middleware modules load without errors", () => {

@@ -37,7 +37,7 @@ async function loadProfile(user) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, billing_tier, role")
+    .select("id, email, full_name, role")
     .eq("id", user.id)
     .single();
 
@@ -46,7 +46,7 @@ async function loadProfile(user) {
       id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "TrafficScout User",
-      billing_tier: "free",
+      role: null,
     };
   }
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { queryClientInstance } from "@/lib/query-client";
@@ -11,7 +11,6 @@ import { NavigationProvider } from "@/lib/NavigationContext";
 import AuthScreen from "@/components/auth/AuthScreen";
 import Landing from "@/pages/Landing";
 
-const Analyze = lazy(() => import("@/pages/Analyze"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const SavedLocations = lazy(() => import("@/pages/SavedLocations"));
@@ -69,14 +68,6 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route element={<ProtectedApp />}>
-        <Route
-          path="/app"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <Analyze />
-            </Suspense>
-          }
-        />
         <Route
           path="/dashboard"
           element={
@@ -186,6 +177,8 @@ function AppRoutes() {
         />
       </Route>
 
+      {/* Legacy route redirects — point old SaaS paths to workspace */}
+      <Route path="/app" element={<Navigate to="/workspace" replace />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

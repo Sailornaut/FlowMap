@@ -1,70 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Loader2, LogOut, Sparkles, User, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
+import { LogOut, User, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
-import {
-  createAddonCheckoutSession,
-  createCheckoutSession,
-  createPortalSession,
-  getAccountSummary,
-} from "@/lib/api-client";
-import { getPlanConfig } from "@/lib/plan-config";
 import DeleteAccountModal from "@/components/layout/DeleteAccountModal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-function PlanBadge({ tier }) {
-  const label = getPlanConfig(tier).label;
-  return <Badge variant={tier === "free" ? "secondary" : "default"}>{label}</Badge>;
-}
-
-function formatAllowance(plan) {
-  return plan.totalLimit === null ? "Unlimited" : String(plan.totalLimit);
-}
 
 export default function Profile() {
   const { currentUser, logout } = useAuth();
-  const { data: account, isLoading } = useQuery({
-    queryKey: ["account-summary"],
-    queryFn: getAccountSummary,
-    staleTime: 1000 * 30,
-  });
-  const currentTier = account?.tier || currentUser?.billing_tier || "free";
-  const currentPlan = getPlanConfig(currentTier);
-  const availableUpgrades = currentTier === "free" ? ["pro"] : [];
-
-  const handleUpgrade = async (plan) => {
-    try {
-      const result = await createCheckoutSession(plan);
-      window.location.assign(result.url);
-    } catch (error) {
-      toast.error(error.message || "Could not start checkout.");
-    }
-  };
-
-  const handleManageBilling = async () => {
-    try {
-      const result = await createPortalSession();
-      window.location.assign(result.url);
-    } catch (error) {
-      toast.error(error.message || "Could not open billing portal.");
-    }
-  };
-
-  const handleAddonCheckout = async () => {
-    try {
-      const result = await createAddonCheckoutSession();
-      window.location.assign(result.url);
-    } catch (error) {
-      toast.error(error.message || "Could not start add-on checkout.");
-    }
-  };
-
-  const usageUsed = account?.usage?.used ?? 0;
-  const usageLimit = account?.usage?.limit ?? currentPlan.totalLimit;
-  const usageLabel = usageLimit === null ? "Unlimited" : usageLimit;
-  const usagePercent = usageLimit === null ? 0 : Math.min(100, (usageUsed / Math.max(1, usageLimit || 1)) * 100);
-  const purchasedCredits = account?.usage?.purchasedCredits ?? 0;
+  const role = currentUser?.role || "analyst";
 
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
@@ -76,28 +17,14 @@ export default function Profile() {
                 <User className="h-7 w-7" />
               </div>
               <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
-                    {currentUser?.full_name || "TrafficScout account"}
-                  </h1>
-                  <PlanBadge tier={currentTier} />
-                </div>
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  {currentUser?.full_name || "TrafficScout account"}
+                </h1>
                 <p className="mt-1 text-sm text-slate-600">{currentUser?.email || ""}</p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {availableUpgrades.length > 0 &&
-                availableUpgrades.map((plan) => (
-                  <Button key={plan} className="gap-2" onClick={() => handleUpgrade(plan)}>
-                    <Sparkles className="h-4 w-4" />
-                    Upgrade to {getPlanConfig(plan).label}
-                  </Button>
-                ))}
-              <Button variant="outline" className="gap-2" onClick={handleManageBilling}>
-                <CreditCard className="h-4 w-4" />
-                Manage billing
-              </Button>
               <Button variant="outline" className="gap-2" onClick={() => logout("/")}>
                 <LogOut className="h-4 w-4" />
                 Sign out
@@ -113,128 +40,32 @@ export default function Profile() {
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-950">Plan and usage</h2>
-                <p className="text-sm text-slate-600">Track your analysis allowance and billing access.</p>
+                <h2 className="text-lg font-semibold text-slate-950">Access</h2>
+                <p className="text-sm text-slate-600">Your role and permissions.</p>
               </div>
             </div>
 
-            {isLoading ? (
-              <div className="flex items-center gap-3 py-10 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading account details...
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Role</p>
+                <p className="mt-3 text-lg font-semibold text-slate-950 capitalize">{role}</p>
               </div>
-            ) : (
-              <div className="mt-6 space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Current plan</p>
-                    <div className="mt-3">
-                      <PlanBadge tier={currentTier} />
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Analyses used</p>
-                    <p className="mt-3 text-2xl font-semibold text-slate-950">{usageUsed}</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Plan allowance</p>
-                    <p className="mt-3 text-2xl font-semibold text-slate-950">{usageLabel}</p>
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">Usage progress</p>
-                      {usageLimit === null ? (
-                        <p className="mt-1 text-sm text-slate-600">Unlimited analyses are active on your plan.</p>
-                      ) : (
-                        <div className="mt-1 text-sm text-slate-600">
-                          <p>{usageUsed} of {usageLimit} total analyses used</p>
-                          {currentTier === "free" ? (
-                            <p className="mt-1">
-                              Includes 3 free analyses and {purchasedCredits} purchased add-on
-                              {purchasedCredits === 1 ? "" : "s"}.
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                    {usageLimit === null ? (
-                      <p className="text-sm font-semibold text-emerald-700">Unlimited</p>
-                    ) : (
-                      <p className="text-sm font-semibold text-slate-900">{Math.round(usagePercent)}%</p>
-                    )}
-                  </div>
-                  {usageLimit === null ? (
-                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-                      Unlimited analyses included with {currentPlan.label}.
-                    </div>
-                  ) : (
-                    <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${usagePercent}%` }} />
-                    </div>
-                  )}
-                </div>
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-900">Internal access active</p>
+                <p className="mt-1 text-sm text-emerald-800">
+                  Analysis, reporting, and all workspace features are available.
+                </p>
               </div>
-            )}
+            </div>
           </section>
 
           <section className="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.35)]">
             <h2 className="text-lg font-semibold text-slate-950">Account tools</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Manage billing, change plan access, or clear saved account data from this browser.
+              Manage your account settings or sign out.
             </p>
 
             <div className="mt-6 space-y-3">
-              {availableUpgrades.length > 0 ? (
-                availableUpgrades.map((plan) => {
-                  const config = getPlanConfig(plan);
-                  return (
-                    <div key={plan} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-950">{config.label}</p>
-                          <p className="mt-1 text-sm text-slate-600">{config.blurb}</p>
-                          <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                            {formatAllowance(config)} analyses {config.totalLimit === null ? "" : "total"}
-                          </p>
-                          {plan === "pro" ? (
-                            <p className="mt-2 text-xs font-medium text-slate-500">{config.priceLabel}</p>
-                          ) : null}
-                        </div>
-                        <Button className="shrink-0 gap-2" onClick={() => handleUpgrade(plan)}>
-                          <Sparkles className="h-4 w-4" />
-                          Upgrade
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-sm font-semibold text-emerald-900">Your paid plan is already active</p>
-                  <p className="mt-1 text-sm text-emerald-800">
-                    Billing tools are still available below if you need to manage your subscription.
-                  </p>
-                </div>
-              )}
-              {currentTier === "free" ? (
-                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm font-semibold text-amber-900">$5 add-on analyses</p>
-                  <p className="mt-1 text-sm text-amber-800">
-                    Buy one extra analysis at a time without moving to Pro.
-                  </p>
-                  <Button className="mt-4 gap-2" variant="outline" onClick={handleAddonCheckout}>
-                    <CreditCard className="h-4 w-4" />
-                    Buy 1 analysis for $5
-                  </Button>
-                </div>
-              ) : null}
-              <Button variant="outline" className="w-full justify-start gap-2" onClick={handleManageBilling}>
-                <CreditCard className="h-4 w-4" />
-                Open billing portal
-              </Button>
               <Button variant="outline" className="w-full justify-start gap-2" onClick={() => logout("/")}>
                 <LogOut className="h-4 w-4" />
                 Sign out

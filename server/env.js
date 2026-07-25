@@ -20,10 +20,6 @@ const OPTIONAL_VARS = [
   "VITE_MAPBOX_ACCESS_TOKEN", // geocoding + isochrone (Phase 3 pipeline)
   "CENSUS_API_KEY",           // ACS demographic data (free: api.census.gov/data/key_signup.html)
   "OPENAI_API_KEY",           // legacy /api/analyze (deprecated; not used by new pipeline)
-  "STRIPE_SECRET_KEY",        // legacy billing (deprecation planned, Phase 7)
-  "STRIPE_WEBHOOK_SECRET",
-  "STRIPE_PRICE_PRO_MONTHLY",
-  "STRIPE_PRICE_ANALYSIS_ADDON",
   "UPSTASH_REDIS_REST_URL",
   "UPSTASH_REDIS_REST_TOKEN",
   "SENTRY_DSN",

@@ -2,8 +2,8 @@
 
 Running record of the SaaS → internal CRE-intelligence pivot: findings, decisions, implemented slices, verification results, and pending actions. Companion docs: `PIVOT_ARCHITECTURE_ASSESSMENT.md` (ground-truth inventory), `TARGET_ARCHITECTURE.md`, `DATA_MODEL.md`, `REPORT_SCHEMA.md`, `MIGRATION_PLAN.md` (original 7-phase plan), `GOVERNING_ROADMAP_AUDIT.md` (comprehensive audit against the governing Phases 2–10 roadmap).
 
-**Current governing phase: Phase 8 — Internal knowledge assistant (complete).**
-**Phases 2–8 complete. Pre-Phase 2 stabilization: owner actions pending.**
+**Current governing phase: Phase 8 — Internal knowledge assistant (complete). Legacy SaaS removal complete.**
+**Phases 2–8 complete. Legacy billing/subscription model retired. Next: Phase 9.**
 
 ---
 
@@ -87,7 +87,7 @@ Assessed at `main` @ `305853e`. Full detail in `PIVOT_ARCHITECTURE_ASSESSMENT.md
 
 ---
 
-## 3. Current state summary (2026-07-23 audit)
+## 3. Current state summary (updated 2026-07-24)
 
 **Code completed and verified:**
 - Taxonomy domain module (19 sectors, 33 categories, validation, sqft-compat) — 10 tests
@@ -107,7 +107,7 @@ Assessed at `main` @ `305853e`. Full detail in `PIVOT_ARCHITECTURE_ASSESSMENT.md
 - Role gate has not been tested against the deployed Render API
 - Sign-up disable has not been confirmed in Supabase dashboard
 
-**Phase 2 — in progress (2026-07-23):**
+**Phase 2 — complete (2026-07-23):**
 - Migration 0002 created: 32 new tables with RLS (all core entities from DATA_MODEL.md). **Not yet applied to live DB — requires owner action.**
 - Server modularized: `server/routes/` (properties, tenants, vacancies, analyses), `server/middleware/` (auth, error-handler), `server/services/` (supabase-admin). Legacy routes in `server/index.js` preserved.
 - Property CRUD routes: list, get, create, update — role-gated via middleware
@@ -122,7 +122,7 @@ Assessed at `main` @ `305853e`. Full detail in `PIVOT_ARCHITECTURE_ASSESSMENT.md
 
 **Phase 2 code-complete.** All code-side acceptance criteria met. Live verification requires owner to apply migrations 0001 + 0002.
 
-**Phase 3 — in progress (2026-07-23):**
+**Phase 3 — complete (2026-07-23):**
 - Pipeline runner framework: `server/pipeline/runner.js` — ordered stage execution, failure isolation, cost tracking, confidence propagation, depth filtering, inputs hashing. 21 assertions pass.
 - Stage 1 (property-validation): validates required/recommended fields, geocode, per-vacancy completeness. Pure logic, no external calls.
 - Stage 2 (geo-enrichment): confirms or obtains coordinates via Mapbox Geocoding. Records source observations with provenance.
@@ -231,15 +231,16 @@ P4 (tests + verification): 185 tests pass (15 test files). New tests: assistant 
 
 | # | Action | Why | Status |
 |---|---|---|---|
-| 1 | Run `npm install` in the repo on macOS | gets correct native binaries; verify `npm test` and `npm run build` pass locally | ☐ |
-| 2 | Apply `supabase/migrations/0001_add_profile_roles.up.sql` in the Supabase SQL editor | creates `profiles.role`, seeds `davidshoemaker@gameplan.tech` as admin. **Required before deploying the role-gated code** — without it, every analyze call 403s, including yours | ☐ |
+| 1 | Run `npm install` in the repo on macOS | gets correct native binaries; verify `npm test` (185/185) and `npm run build` pass locally | ☐ |
+| 2 | Apply `supabase/migrations/0001_add_profile_roles.up.sql` in the Supabase SQL editor | creates `profiles.role`, seeds `davidshoemaker@gameplan.tech` as admin. **Required before deploying the role-gated code** | ☐ |
 | 3 | Supabase dashboard → Auth → Providers → Email → **disable sign-ups** | closes open registration; top security item | ☐ |
 | 4 | Check Stripe dashboard for active subscriptions | determines whether billing teardown requires cancel/refund actions | ☐ |
 | 5 | Confirm owner account email for admin seeding | migration 0001 seeds `davidshoemaker@gameplan.tech` — confirm this is correct | ☐ |
 | 6 | Commit pivot changes with git locally | sandbox git operations can leave stale lock files; run git on the development machine | ☐ |
 | 7 | Apply `supabase/migrations/0002_core_data_model.up.sql` in the Supabase SQL editor | creates all 32 Phase 2 tables with RLS. **Required before the new CRUD routes will work.** Apply after migration 0001. | ☐ |
-| 8 | Apply `supabase/migrations/0003_analysis_manifests.up.sql` in the Supabase SQL editor | creates `analysis_manifests` table with immutability triggers (BEFORE UPDATE/DELETE), grants (REVOKE mutation from anon/authenticated), and atomic `create_analysis_run_with_manifest` RPC. Apply after migration 0002. **Blocking — POST /api/analyses and POST /api/analyses/:id/execute return 503 without this migration.** | ☐ |
-| 9 | Apply `supabase/migrations/0004_seed_data_sources.up.sql` in the Supabase SQL editor | seeds 5 data_sources rows (mapbox_geocoding, mapbox_isochrone, census_geocoder, census_acs_5yr, osm_overpass). Required for source_observations FK linkage. Apply after migration 0003. Without this, observations are skipped with a log warning but the pipeline still completes. | ☐ |
+| 8 | Apply `supabase/migrations/0003_analysis_manifests.up.sql` in the Supabase SQL editor | analysis_manifests + immutability triggers + RPC. Apply after 0002. | ✅ applied |
+| 9 | Apply `supabase/migrations/0004_seed_data_sources.up.sql` in the Supabase SQL editor | seeds 5 data_sources rows. Apply after 0003. | ☐ |
+| 10 | Apply `supabase/migrations/0005_follow_ups_outcomes_lessons.up.sql` in the Supabase SQL editor | follow_ups, observed_outcomes, lessons_learned, lesson_references tables. Apply after 0004. | ✅ applied |
 
 ## 5. Live-verification checklist
 
@@ -258,36 +259,13 @@ These items cannot be verified without access to live services:
 | Vacancy CRUD works | Render | `POST /api/properties/:id/vacancies` with staff session creates a vacancy | ☐ |
 | Analysis creation works | Render | `POST /api/analyses` with staff session creates a run with manifest | ☐ |
 
-## 6. Phase 2 — Code complete (pending live verification)
+## 6. Phase 2 — Complete
 
-All Phase 2 code-side work is done:
-- Migration 0002: 32 tables with RLS ✅
-- Server modularization: routes, middleware, services ✅
-- Property/tenant/vacancy/analysis CRUD routes ✅
-- Scoring engine (15 components, deterministic, versioned) ✅
-- Rent analysis (two shapes only, comparable validation) ✅
-- Six scenario fixtures verified against domain modules ✅
+All Phase 2 work done: migration 0002 (32 tables with RLS), server modularization, property/tenant/vacancy/analysis CRUD routes, scoring engine, rent analysis, 6 scenario fixtures. Owner action: apply migrations 0001+0002 to live DB.
 
-**Remaining for Phase 2 sign-off:** owner must apply migrations 0001+0002, then live-verify CRUD routes work against real DB (see §5).
+## 7. Phase 3 — Complete (live-verified)
 
-## 7. Phase 3 — Pipeline infrastructure code-complete, remaining work
-
-Completed:
-- Pipeline runner framework ✅
-- Property-validation stage (no external deps) ✅
-- Geo-enrichment stage (Mapbox geocoding) ✅
-- Trade-area stage (Mapbox Isochrone) ✅
-- Demographics stage (Census/ACS) ✅
-- Demand-generators stage (POI via pluggable service) ✅
-- Source observation recording in all external stages ✅
-- Mock-verified tests (104 assertions total) ✅
-
-Remaining for Phase 3 sign-off:
-1. Wire pipeline into analysis run route (`POST /api/analyses/:id/execute`)
-2. Persist `analysis_stage_results` rows from pipeline output
-3. Persist `source_observations` from pipeline observations
-4. Live-verify at least one external service (Mapbox geocoding — token exists)
-5. Remaining stages: traffic-patterns (5), competition (7), tenant-classification (8), gap-analysis (9), vacancy-compatibility (10) — these are Phase 4/5 scope
+Pipeline runner + 6 stages (property-validation, geo-enrichment, trade-area, demographics, demand-generators, vacancy-scoring). All external services live-verified: Mapbox geocoding + isochrone, Census ACS, OSM Overpass. Full end-to-end analysis executed and results displayed in workspace UI.
 
 See `GOVERNING_ROADMAP_AUDIT.md` for the full acceptance-criterion breakdown.
 
@@ -314,3 +292,4 @@ See `GOVERNING_ROADMAP_AUDIT.md` for the full acceptance-criterion breakdown.
 | 2026-07-24 | Vuln remediation | ✅ user-verified | 168/168 ✅ | n/a | n/a | Removed unused react-quill (2 moderate XSS). Added npm overrides for brace-expansion >=5.0.8 (6 high DoS). 2 moderate react-router deferred (requires v6→v7 migration). |
 | 2026-07-24 | Phase 7 follow-ups (P1–P7) | ✅ user-verified | 179/179 ✅ | n/a | n/a | Migration 0005 (4 tables); 3 route modules; 3 UI pages; auto-milestone generation; all server files pass node --check; vite build 3182 modules |
 | 2026-07-24 | Phase 8 assistant (P1–P4) | ✅ user-verified | 185/185 ✅ | n/a | n/a | Assistant service (9 tools, OpenAI tool-calling); API endpoint with safe logging; floating chat widget; all server files pass node --check; vite build 3183 modules |
+| 2026-07-25 | Legacy SaaS removal | ⚠️ sandbox env | env.test updated | n/a | n/a | Removed: 11 billing functions, 5 billing routes, Stripe webhook, plan-tier enforcement, usage quotas, credit system, checkout flows, plan badges, upgrade prompts, pricing section. Stripe deps removed from package.json. STRIPE_* env vars removed. Landing page pricing → request-access CTA. /app → /workspace redirect. Profile simplified to role-based. AuthContext no longer queries billing_tier. |

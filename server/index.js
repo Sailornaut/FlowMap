@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import express from "express";
 import OpenAI from "openai";
 import * as Sentry from "@sentry/node";
-import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { Redis } from "@upstash/redis";
 import { hasInternalAccess } from "./access-control.js";
@@ -102,13 +101,7 @@ const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 1000 * 6
 const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 15);
 const CACHE_TTL_SECONDS = Math.max(1, Math.ceil(CACHE_TTL_MS / 1000));
 const RATE_LIMIT_WINDOW_SECONDS = Math.max(1, Math.ceil(RATE_LIMIT_WINDOW_MS / 1000));
-const PLAN_LIMITS = {
-  free: 3,
-  pro: null,
-  business: null,
-};
-const FREE_TIER_INCLUDED_ANALYSES = PLAN_LIMITS.free;
-const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
+// Legacy billing constants removed — access is now role-based only.
 const hasRedisConfig = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
 app.set("trust proxy", 1);
@@ -126,13 +119,13 @@ app.use((request, response, next) => {
     response.setHeader("Vary", "Origin");
     response.setHeader(
       "Access-Control-Allow-Headers",
-      "Authorization, Content-Type, Stripe-Signature, baggage, sentry-trace"
+      "Authorization, Content-Type, baggage, sentry-trace"
     );
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     response.setHeader("Access-Control-Max-Age", "86400");
     response.setHeader(
       "Access-Control-Expose-Headers",
-      "X-Cache, X-Plan, X-Usage-Limit, X-Usage-Remaining, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
+      "X-Cache, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
     );
   }
 
@@ -144,22 +137,13 @@ app.use((request, response, next) => {
   next();
 });
 
-app.post("/api/stripe/webhook", express.raw({ type: "application/json" }));
-app.use((request, response, next) => {
-  if (request.path === "/api/stripe/webhook") {
-    next();
-    return;
-  }
-
-  express.json({ limit: "1mb" })(request, response, next);
-});
+app.use(express.json({ limit: "1mb" }));
 
 const analysisCache = new Map();
 const rateLimitStore = new Map();
 
 let supabaseAdminClient;
 let openAIClient;
-let stripeClient;
 let redisClient;
 
 function reportServerError(error, context = {}) {
@@ -211,20 +195,6 @@ function getOpenAIClient() {
 
   openAIClient = new OpenAI({ apiKey });
   return openAIClient;
-}
-
-function getStripeClient() {
-  if (stripeClient) {
-    return stripeClient;
-  }
-
-  const apiKey = process.env.STRIPE_SECRET_KEY;
-  if (!apiKey) {
-    throw new Error("STRIPE_SECRET_KEY is not configured.");
-  }
-
-  stripeClient = new Stripe(apiKey);
-  return stripeClient;
 }
 
 function getRedisClient() {
@@ -457,284 +427,18 @@ async function getAuthenticatedContext(request) {
   }
 
   const profile = await ensureProfile(user);
-  const subscription = await getLatestSubscription(user.id);
 
   return {
     accessToken,
     user,
     profile,
-    subscription,
-    tier: deriveBillingTier(profile, subscription),
   };
 }
 
-async function getLatestSubscription(userId) {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-}
-
-function deriveBillingTier(profile, subscription) {
-  if (subscription && ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
-    return subscription.billing_tier;
-  }
-
-  return profile?.billing_tier || "free";
-}
-
-async function getUsageSummary(userId, tier) {
-  const supabase = getSupabaseAdmin();
-  const { count, error } = await supabase
-    .from("usage_events")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("event_type", "analysis_run");
-
-  if (error) {
-    throw error;
-  }
-
-  const used = count || 0;
-  let purchasedCredits = 0;
-
-  if (tier === "free") {
-    const { data: creditEvents, error: creditError } = await supabase
-      .from("usage_events")
-      .select("metadata")
-      .eq("user_id", userId)
-      .eq("event_type", "analysis_credit_purchase");
-
-    if (creditError) {
-      throw creditError;
-    }
-
-    purchasedCredits = (creditEvents || []).reduce((sum, event) => {
-      const quantity = Number(event?.metadata?.quantity ?? 1);
-      return sum + (Number.isFinite(quantity) ? quantity : 1);
-    }, 0);
-  }
-
-  const hasPlanLimit = Object.prototype.hasOwnProperty.call(PLAN_LIMITS, tier);
-  const limit = tier === "free" ? FREE_TIER_INCLUDED_ANALYSES + purchasedCredits : hasPlanLimit ? PLAN_LIMITS[tier] : PLAN_LIMITS.free;
-  const isUnlimited = limit === null;
-
-  return {
-    used,
-    limit,
-    remaining: isUnlimited ? null : Math.max(0, limit - used),
-    resetPolicy: tier === "free" ? "lifetime" : "unlimited",
-    included: tier === "free" ? FREE_TIER_INCLUDED_ANALYSES : null,
-    purchasedCredits: tier === "free" ? purchasedCredits : null,
-  };
-}
-
-async function recordUsageEvent(userId, cacheKey, metadata = {}) {
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("usage_events").insert({
-    user_id: userId,
-    event_type: "analysis_run",
-    cache_key: cacheKey,
-    metadata,
-  });
-
-  if (error) {
-    throw error;
-  }
-}
-
-function getTierPriceId(plan) {
-  if (plan === "pro") {
-    return process.env.STRIPE_PRICE_PRO_MONTHLY;
-  }
-
-  return null;
-}
-
-function getAddonPriceId() {
-  return process.env.STRIPE_PRICE_ANALYSIS_ADDON || null;
-}
-
-async function ensureStripeCustomer(profile, user) {
-  if (profile.stripe_customer_id) {
-    return profile.stripe_customer_id;
-  }
-
-  const stripe = getStripeClient();
-  const customer = await stripe.customers.create({
-    email: profile.email || user.email,
-    name: profile.full_name || user.user_metadata?.full_name || undefined,
-    metadata: {
-      user_id: user.id,
-    },
-  });
-
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ stripe_customer_id: customer.id })
-    .eq("id", user.id);
-
-  if (error) {
-    throw error;
-  }
-
-  return customer.id;
-}
-
-async function resolveStripeUserId(stripeObject) {
-  const directUserId = stripeObject?.metadata?.user_id || stripeObject?.customer_details?.metadata?.user_id;
-  if (directUserId) {
-    return directUserId;
-  }
-
-  const customerId = stripeObject?.customer ? String(stripeObject.customer) : "";
-  if (!customerId) {
-    return null;
-  }
-
-  const supabase = getSupabaseAdmin();
-  const { data: profileByCustomer, error: profileError } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("stripe_customer_id", customerId)
-    .maybeSingle();
-
-  if (profileError) {
-    throw profileError;
-  }
-
-  if (profileByCustomer?.id) {
-    return profileByCustomer.id;
-  }
-
-  const stripe = getStripeClient();
-  const customer = await stripe.customers.retrieve(customerId);
-  if (customer && !customer.deleted && customer.metadata?.user_id) {
-    return customer.metadata.user_id;
-  }
-
-  return null;
-}
-
-async function syncSubscriptionFromStripe(stripeSubscription, userIdOverride = null) {
-  const supabase = getSupabaseAdmin();
-  const stripePriceId = stripeSubscription.items.data[0]?.price?.id;
-  const billingTier =
-    stripePriceId === process.env.STRIPE_PRICE_BUSINESS_MONTHLY
-      ? "business"
-      : stripePriceId === process.env.STRIPE_PRICE_PRO_MONTHLY
-        ? "pro"
-        : "free";
-  const userId = userIdOverride || (await resolveStripeUserId(stripeSubscription));
-
-  if (!userId) {
-    return;
-  }
-
-  const subscriptionRecord = {
-    id: stripeSubscription.id,
-    user_id: userId,
-    stripe_customer_id: String(stripeSubscription.customer),
-    stripe_price_id: stripePriceId,
-    status: stripeSubscription.status,
-    billing_tier: billingTier,
-    current_period_end: stripeSubscription.items.data[0]?.current_period_end
-      ? new Date(stripeSubscription.items.data[0].current_period_end * 1000).toISOString()
-      : null,
-    cancel_at_period_end: Boolean(stripeSubscription.cancel_at_period_end),
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error: subscriptionError } = await supabase
-    .from("subscriptions")
-    .upsert(subscriptionRecord, { onConflict: "id" });
-
-  if (subscriptionError) {
-    throw subscriptionError;
-  }
-
-  const nextTier = ACTIVE_SUBSCRIPTION_STATUSES.has(stripeSubscription.status) ? billingTier : "free";
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      stripe_customer_id: String(stripeSubscription.customer),
-      billing_tier: nextTier,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-
-  if (profileError) {
-    throw profileError;
-  }
-}
-
-async function syncCompletedCheckoutSession(session) {
-  if (!session?.customer || !session?.metadata?.user_id) {
-    return;
-  }
-
-  const supabase = getSupabaseAdmin();
-  await supabase
-    .from("profiles")
-    .update({
-      stripe_customer_id: String(session.customer),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", session.metadata.user_id);
-
-  if (session.metadata?.purchase_type === "analysis_addon") {
-    const quantity = Math.max(1, Number(session.metadata?.quantity || 1));
-    const { data: existingCredit } = await supabase
-      .from("usage_events")
-      .select("id")
-      .eq("user_id", session.metadata.user_id)
-      .eq("event_type", "analysis_credit_purchase")
-      .contains("metadata", { stripe_checkout_session_id: session.id })
-      .limit(1)
-      .maybeSingle();
-
-    if (!existingCredit) {
-      await supabase.from("usage_events").insert({
-        user_id: session.metadata.user_id,
-        event_type: "analysis_credit_purchase",
-        metadata: {
-          stripe_checkout_session_id: session.id,
-          quantity,
-        },
-      });
-    }
-
-    return;
-  }
-
-  if (session.subscription) {
-    const stripe = getStripeClient();
-    const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
-    await syncSubscriptionFromStripe(subscription, session.metadata.user_id);
-  }
-}
-
-async function getProfileById(userId) {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-}
+// --- Legacy billing functions removed (getLatestSubscription, deriveBillingTier,
+// getUsageSummary, recordUsageEvent, getTierPriceId, getAddonPriceId,
+// ensureStripeCustomer, resolveStripeUserId, syncSubscriptionFromStripe,
+// syncCompletedCheckoutSession, getProfileById) ---
 
 const analysisSchema = {
   name: "trafficscout_location_analysis",
@@ -839,13 +543,9 @@ app.get("/api/account", async (request, response) => {
       return;
     }
 
-    const usage = await getUsageSummary(context.user.id, context.tier);
     response.json({
       user: context.profile,
-      tier: context.tier,
-      usage,
-      subscription: context.subscription,
-      plans: PLAN_LIMITS,
+      role: context.profile?.role || null,
     });
   } catch (error) {
     reportServerError(error, { route: { path: "/api/account", method: "GET" } });
@@ -853,197 +553,8 @@ app.get("/api/account", async (request, response) => {
   }
 });
 
-app.post("/api/billing/checkout", async (request, response) => {
-  try {
-    const context = await getAuthenticatedContext(request);
-    if (!context) {
-      response.status(401).json({ error: "Sign in required." });
-      return;
-    }
-
-    const { plan } = request.body ?? {};
-    const priceId = getTierPriceId(plan);
-    if (!priceId) {
-      response.status(400).json({ error: "Unknown plan selected." });
-      return;
-    }
-
-    const stripe = getStripeClient();
-    const customerId = await ensureStripeCustomer(context.profile, context.user);
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      success_url: `${siteUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      allow_promotion_codes: true,
-      metadata: {
-        user_id: context.user.id,
-        plan,
-      },
-      subscription_data: {
-        metadata: {
-          user_id: context.user.id,
-          plan,
-        },
-      },
-    });
-
-    response.json({ url: session.url });
-  } catch (error) {
-    reportServerError(error, { route: { path: "/api/billing/checkout", method: "POST" } });
-    response.status(500).json({ error: error?.message || "Could not create checkout session." });
-  }
-});
-
-app.post("/api/billing/addon-checkout", async (request, response) => {
-  try {
-    const context = await getAuthenticatedContext(request);
-    if (!context) {
-      response.status(401).json({ error: "Sign in required." });
-      return;
-    }
-
-    if (context.tier !== "free") {
-      response.status(400).json({ error: "Add-on analyses are only available on the free tier." });
-      return;
-    }
-
-    const priceId = getAddonPriceId();
-    if (!priceId) {
-      response.status(500).json({ error: "Add-on pricing is not configured." });
-      return;
-    }
-
-    const stripe = getStripeClient();
-    const customerId = await ensureStripeCustomer(context.profile, context.user);
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer: customerId,
-      success_url: `${siteUrl}/dashboard?checkout=addon-success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      metadata: {
-        user_id: context.user.id,
-        purchase_type: "analysis_addon",
-        quantity: "1",
-      },
-    });
-
-    response.json({ url: session.url });
-  } catch (error) {
-    reportServerError(error, { route: { path: "/api/billing/addon-checkout", method: "POST" } });
-    response.status(500).json({ error: error?.message || "Could not create add-on checkout session." });
-  }
-});
-
-app.get("/api/billing/checkout-status", async (request, response) => {
-  try {
-    const context = await getAuthenticatedContext(request);
-    if (!context) {
-      response.status(401).json({ error: "Sign in required." });
-      return;
-    }
-
-    const sessionId = String(request.query.session_id || "").trim();
-    if (!sessionId) {
-      response.status(400).json({ error: "Missing checkout session id." });
-      return;
-    }
-
-    const stripe = getStripeClient();
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.metadata?.user_id !== context.user.id) {
-      response.status(403).json({ error: "That checkout session does not belong to this account." });
-      return;
-    }
-
-    if (session.status === "complete" && session.payment_status === "paid") {
-      await syncCompletedCheckoutSession(session);
-    }
-
-    const profile = await getProfileById(context.user.id);
-    const subscription = await getLatestSubscription(context.user.id);
-    const tier = deriveBillingTier(profile, subscription);
-    const usage = await getUsageSummary(context.user.id, tier);
-
-    response.json({
-      completed: session.status === "complete",
-      paymentStatus: session.payment_status,
-      checkoutMode: session.mode,
-      tier,
-      usage,
-      subscription,
-    });
-  } catch (error) {
-    reportServerError(error, { route: { path: "/api/billing/checkout-status", method: "GET" } });
-    response.status(500).json({ error: error?.message || "Could not verify checkout session." });
-  }
-});
-
-app.post("/api/billing/portal", async (request, response) => {
-  try {
-    const context = await getAuthenticatedContext(request);
-    if (!context) {
-      response.status(401).json({ error: "Sign in required." });
-      return;
-    }
-
-    const customerId = await ensureStripeCustomer(context.profile, context.user);
-    const stripe = getStripeClient();
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${siteUrl}/dashboard`,
-    });
-
-    response.json({ url: session.url });
-  } catch (error) {
-    reportServerError(error, { route: { path: "/api/billing/portal", method: "POST" } });
-    response.status(500).json({ error: error?.message || "Could not create billing portal session." });
-  }
-});
-
-app.post("/api/stripe/webhook", async (request, response) => {
-  try {
-    const stripe = getStripeClient();
-    const secret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!secret) {
-      response.status(500).send("Missing STRIPE_WEBHOOK_SECRET");
-      return;
-    }
-
-    const signature = request.headers["stripe-signature"];
-    const event = stripe.webhooks.constructEvent(request.body, signature, secret);
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      await syncCompletedCheckoutSession(session);
-    }
-
-    if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
-      await syncSubscriptionFromStripe(event.data.object);
-    }
-
-    if (event.type === "customer.subscription.deleted") {
-      await syncSubscriptionFromStripe(event.data.object);
-    }
-
-    response.json({ received: true });
-  } catch (error) {
-    reportServerError(error, { route: { path: "/api/stripe/webhook", method: "POST" } });
-    response.status(400).send(error?.message || "Webhook failed");
-  }
-});
+// --- Legacy billing routes removed: /api/billing/checkout, /api/billing/addon-checkout,
+// /api/billing/checkout-status, /api/billing/portal, /api/stripe/webhook ---
 
 app.post("/api/analyze", async (request, response) => {
   try {
@@ -1078,23 +589,7 @@ app.post("/api/analyze", async (request, response) => {
     const cached = await getCachedAnalysis(cacheKey);
     if (cached) {
       response.setHeader("X-Cache", "HIT");
-      response.setHeader("X-Plan", context.tier);
       response.json(cached);
-      return;
-    }
-
-    const usage = await getUsageSummary(context.user.id, context.tier);
-    response.setHeader("X-Plan", context.tier);
-    response.setHeader("X-Usage-Limit", usage.limit === null ? "unlimited" : String(usage.limit));
-    response.setHeader("X-Usage-Remaining", usage.remaining === null ? "unlimited" : String(usage.remaining));
-
-    if (usage.remaining !== null && usage.remaining <= 0) {
-      response.status(403).json({
-        error: `You have reached the ${context.tier} plan limit.`,
-        code: "plan_limit_reached",
-        tier: context.tier,
-        usage,
-      });
       return;
     }
 
@@ -1157,10 +652,6 @@ app.post("/api/analyze", async (request, response) => {
 
     const payload = JSON.parse(result.output_text);
     await setCachedAnalysis(cacheKey, payload);
-    await recordUsageEvent(context.user.id, cacheKey, {
-      tier: context.tier,
-      locationName: location.name,
-    });
 
     response.json(payload);
   } catch (error) {

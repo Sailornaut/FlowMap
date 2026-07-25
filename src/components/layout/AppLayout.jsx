@@ -1,53 +1,23 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Bookmark, Search, User, LogOut, Sparkles } from "lucide-react";
+import { BarChart3, Bookmark, Search, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigation } from "@/lib/NavigationContext";
-import { getAccountSummary, createCheckoutSession } from "@/lib/api-client";
-import { getNextUpgradeTier, getPlanConfig } from "@/lib/plan-config";
 import TrafficScoutLogo from "@/components/brand/TrafficScoutLogo";
 import PageTransition from "./PageTransition";
 import StackHeader from "./StackHeader";
-import { Badge } from "@/components/ui/badge";
 
 const navItems = [
-  { path: "/app", icon: Search, label: "Analyze" },
+  { path: "/workspace", icon: Search, label: "Workspace" },
   { path: "/dashboard", icon: BarChart3, label: "Dashboard" },
   { path: "/saved", icon: Bookmark, label: "Saved" },
 ];
-
-function PlanBadge({ tier }) {
-  const label = getPlanConfig(tier).label;
-  return <Badge variant={tier === "free" ? "secondary" : "default"}>{label}</Badge>;
-}
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { activeTab, isChildRoute } = useNavigation();
-
-  const { data: account } = useQuery({
-    queryKey: ["account-summary"],
-    queryFn: getAccountSummary,
-    staleTime: 1000 * 30,
-  });
-  const currentTier = account?.tier || currentUser?.billing_tier || "free";
-  const nextUpgradeTier = getNextUpgradeTier(currentTier);
-  const nextUpgradeLabel = nextUpgradeTier ? getPlanConfig(nextUpgradeTier).label : null;
-
-  const handleUpgrade = async (plan = nextUpgradeTier) => {
-    if (!plan) return;
-
-    try {
-      const result = await createCheckoutSession(plan);
-      window.location.assign(result.url);
-    } catch (error) {
-      toast.error(error.message || "Could not start checkout.");
-    }
-  };
 
   const handleTabPress = (path) => {
     if (location.pathname === path) return;
@@ -69,7 +39,6 @@ export default function AppLayout() {
         }}
       >
         <TrafficScoutLogo compact iconOnly variant="mark" className="mb-3" />
-        <PlanBadge tier={currentTier} />
 
         {navItems.map((item) => {
           const isActive = activeTab === item.path;
@@ -101,22 +70,12 @@ export default function AppLayout() {
               <div className="min-w-0">
                 <p className="text-xs font-semibold truncate">{currentUser?.full_name || "Profile"}</p>
                 <p className="text-[11px] text-muted-foreground truncate">
-                  {account?.tier ? `${getPlanConfig(account.tier).label} plan` : getPlanConfig(currentTier).label}
+                  {currentUser?.role || "Analyst"}
                 </p>
               </div>
             </div>
           </button>
 
-          {nextUpgradeTier && (
-            <button
-              onClick={() => handleUpgrade(nextUpgradeTier)}
-              className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-              title={`Upgrade to ${nextUpgradeLabel}`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="text-[10px] font-medium">{nextUpgradeLabel}</span>
-            </button>
-          )}
           <button
             onClick={() => logout("/")}
             className="tap-target flex flex-col items-center gap-1 px-3 rounded-xl transition-all duration-200 w-16 text-muted-foreground hover:text-foreground hover:bg-muted"

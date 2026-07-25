@@ -69,56 +69,8 @@ export async function getAccountSummary() {
   return payload;
 }
 
-export async function createCheckoutSession(plan) {
-  const response = await apiFetch("/api/billing/checkout", {
-    method: "POST",
-    body: JSON.stringify({ plan }),
-  });
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload.error || "Could not create checkout session.");
-  }
-
-  return payload;
-}
-
-export async function createAddonCheckoutSession() {
-  const response = await apiFetch("/api/billing/addon-checkout", {
-    method: "POST",
-  });
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload.error || "Could not create add-on checkout session.");
-  }
-
-  return payload;
-}
-
-export async function getCheckoutSessionStatus(sessionId) {
-  const response = await apiFetch(`/api/billing/checkout-status?session_id=${encodeURIComponent(sessionId)}`);
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload.error || "Could not verify checkout session.");
-  }
-
-  return payload;
-}
-
-export async function createPortalSession() {
-  const response = await apiFetch("/api/billing/portal", {
-    method: "POST",
-  });
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload.error || "Could not create billing portal session.");
-  }
-
-  return payload;
-}
+// --- Legacy billing functions removed: createCheckoutSession, createAddonCheckoutSession,
+// getCheckoutSessionStatus, createPortalSession ---
 
 // ---------------------------------------------------------------------------
 // Workspace API — properties

@@ -50,6 +50,11 @@ describe("route modules load without errors", () => {
     const mod = await import("../routes/lessons.js");
     expect(typeof mod.default).toBe("function");
   });
+
+  it("assistant router exports a function", async () => {
+    const mod = await import("../routes/assistant.js");
+    expect(typeof mod.default).toBe("function");
+  });
 });
 
 describe("middleware modules load without errors", () => {

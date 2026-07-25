@@ -18,6 +18,7 @@ import reportsRouter from "./routes/reports.js";
 import followUpsRouter from "./routes/follow-ups.js";
 import outcomesRouter from "./routes/outcomes.js";
 import lessonsRouter from "./routes/lessons.js";
+import assistantRouter from "./routes/assistant.js";
 
 dotenv.config({ path: "trafficscout-api.env" });
 dotenv.config({ path: ".env.local" });
@@ -1179,6 +1180,7 @@ app.use("/api/reports", populateAuth, requireAuth, requireStaff, reportsRouter);
 app.use("/api/follow-ups", populateAuth, requireAuth, requireStaff, followUpsRouter);
 app.use("/api/outcomes", populateAuth, requireAuth, requireStaff, outcomesRouter);
 app.use("/api/lessons", populateAuth, requireAuth, requireStaff, lessonsRouter);
+app.use("/api/assistant", populateAuth, requireAuth, requireStaff, assistantRouter);
 
 // ============================================================================
 // Error handler (must be last)

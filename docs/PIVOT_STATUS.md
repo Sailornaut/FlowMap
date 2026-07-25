@@ -2,8 +2,8 @@
 
 Running record of the SaaS → internal CRE-intelligence pivot: findings, decisions, implemented slices, verification results, and pending actions. Companion docs: `PIVOT_ARCHITECTURE_ASSESSMENT.md` (ground-truth inventory), `TARGET_ARCHITECTURE.md`, `DATA_MODEL.md`, `REPORT_SCHEMA.md`, `MIGRATION_PLAN.md` (original 7-phase plan), `GOVERNING_ROADMAP_AUDIT.md` (comprehensive audit against the governing Phases 2–10 roadmap).
 
-**Current governing phase: Phase 6 — Professional report generation (complete).**
-**Phases 2–6 complete. Pre-Phase 2 stabilization: owner actions pending.**
+**Current governing phase: Phase 8 — Internal knowledge assistant (complete).**
+**Phases 2–8 complete. Pre-Phase 2 stabilization: owner actions pending.**
 
 ---
 
@@ -195,9 +195,33 @@ P4 (UI wiring): AnalysisDetail — "Download PDF" button with `useMutation` call
 
 P5 (verification): 46 assertions pass (21 snapshot builder + 25 structural). All server-side files pass `node --check`. JSX files validated via @babel/parser. No mock data in production code. Package.json updated (added @react-pdf/renderer, removed jspdf/html2canvas).
 
-**Not yet started (governing Phases 7–10):**
-- No follow-up/outcome tracking (Phase 7)
-- No knowledge assistant (Phase 8)
+**Phase 7 — Follow-up, outcomes, and learning — complete (2026-07-24):**
+
+P1 (migration): Created `0005_follow_ups_outcomes_lessons.up.sql` — four new tables: `follow_ups` (property/analysis/vacancy links, milestone types 3/6/12/24mo + custom, due date, status tracking, completion audit trail), `observed_outcomes` (outcome type with lease details, prediction accuracy scoring, observation vs assumption tagging for criterion 7.6, source observation linking), `lessons_learned` (typed and severity-rated knowledge capture), `lesson_references` (polymorphic junction table referencing analysis_runs, report_projects, properties, vacancies, outcomes, and follow_ups for criterion 7.5). All tables have RLS staff-only policies and appropriate indexes.
+
+P2 (follow-up routes): `server/routes/follow-ups.js` — CRUD routes (GET list with filters, GET single, POST create, PATCH update). Auto-milestone generation: POST `/generate` creates default 3/6/12/24-month follow-ups for a completed analysis (idempotent). GET `/summary` provides dashboard counts. Exported `generateDefaultFollowUps()` function called automatically from the analysis execution route when an analysis completes (criterion 7.7).
+
+P3 (outcome routes): `server/routes/outcomes.js` — CRUD routes with joins to properties and tenant_categories. Supports `evidence_type` filter (observation vs assumption per criterion 7.6). Records tenant name, category, actual rent, lease date, and prediction accuracy for tracking how well recommendations performed.
+
+P4 (lessons routes): `server/routes/lessons.js` — CRUD for lessons with nested `lesson_references` (criterion 7.5). POST `/references` and DELETE `/references/:refId` for managing cross-entity links. Subject types: analysis_run, report_project, property, vacancy, observed_outcome, follow_up. Validated server-side.
+
+P5 (UI — follow-ups): `src/pages/workspace/FollowUps.jsx` — summary cards (pending/overdue/completed counts), status filter buttons, follow-up list with property links, complete/skip actions, create dialog with property picker and date input. Dashboard card added to WorkspaceOverview showing overdue count.
+
+P6 (UI — outcomes & lessons): `src/pages/workspace/Outcomes.jsx` — outcome list with evidence-type filter (observation/assumption badges), create dialog with full form (property, outcome type, tenant details, rent, prediction accuracy, evidence type). `src/pages/workspace/Lessons.jsx` — expandable lesson cards with severity/type badges, inline reference management (add/view references by entity type + UUID), create dialog. Navigation added to WorkspaceLayout sidebar (CalendarClock, Target, BookOpen icons). Routes registered in App.jsx.
+
+P7 (verification): 179 tests pass (13 test files). New tests: route module import tests for follow-ups (with generateDefaultFollowUps export check), outcomes, and lessons routers. All server files pass `node --check`. Vite build produces 3182 modules with 3 new page chunks. Auto-milestone generation wired into analysis execution route (non-fatal on failure).
+
+**Phase 8 — Internal knowledge assistant — complete (2026-07-24):**
+
+P1 (assistant service): `server/services/assistant.js` — OpenAI tool-calling integration with 9 retrieval tools (search_properties, get_property_details, search_analyses, get_analysis_details, search_outcomes, search_lessons, search_follow_ups, get_vacancy_details, get_portfolio_summary). Each tool queries Supabase and returns `{ data, sources }`. System prompt enforces: answer only from retrieved data, cite sources as [type:UUID], say "insufficient data" when appropriate, never reveal system details. Max 5 tool-calling rounds to prevent runaway costs.
+
+P2 (API endpoint): `server/routes/assistant.js` — POST `/api/assistant/ask` with auth + safe logging (truncated userId, no question content logged). In-memory conversation threading (per-user, max 5 threads, max 20 messages). DELETE `/threads/:threadId` for clearing conversations. Route mounted in `server/index.js` with populateAuth + requireAuth + requireStaff.
+
+P3 (UI): `src/components/workspace/AssistantChat.jsx` — floating chat widget in workspace sidebar. Collapsed = circular button at bottom-right; expanded = 396×500 panel. Source reference parsing ([type:uuid] → clickable links for properties/analyses). Suggested starter questions, loading state, clear conversation button.
+
+P4 (tests + verification): 185 tests pass (15 test files). New tests: assistant service module (5 — exports, 9 tools with valid schemas, handler for every tool, system prompt rules, tool name set), assistant router import test. All server files pass `node --check`. Vite build produces 3183 modules.
+
+**Not yet started (governing Phases 9–10):**
 - No prospecting tools (Phase 9)
 - No production deployment / hosting (Phase 10)
 
@@ -287,3 +311,6 @@ See `GOVERNING_ROADMAP_AUDIT.md` for the full acceptance-criterion breakdown.
 | 2026-07-24 | Phase 5 scoring (P1–P7) | ⚠️ sandbox env | 48 assertions pass (direct node) | ✅ | n/a | Evidence extractor 24/24; scoring integration 24/24 (determinism, disqualification, confidence, contradictory evidence, strong/weak fit); all files parse; no mock data |
 | 2026-07-24 | Phase 5 test fixes | ✅ user-verified | 168/168 ✅ | n/a | n/a | Fixed 3 runner tests (computeOverallConfidence returns object), 1 stages test (osm_overpass provider name), excluded live-services.test.js from vitest |
 | 2026-07-24 | Phase 6 reports (P1–P5) | ⚠️ sandbox env | 46 assertions pass (direct node) | ✅ | n/a | Snapshot builder 21/21; structural checks 25/25; all files parse; no mock data; @react-pdf/renderer added, jspdf/html2canvas removed |
+| 2026-07-24 | Vuln remediation | ✅ user-verified | 168/168 ✅ | n/a | n/a | Removed unused react-quill (2 moderate XSS). Added npm overrides for brace-expansion >=5.0.8 (6 high DoS). 2 moderate react-router deferred (requires v6→v7 migration). |
+| 2026-07-24 | Phase 7 follow-ups (P1–P7) | ✅ user-verified | 179/179 ✅ | n/a | n/a | Migration 0005 (4 tables); 3 route modules; 3 UI pages; auto-milestone generation; all server files pass node --check; vite build 3182 modules |
+| 2026-07-24 | Phase 8 assistant (P1–P4) | ✅ user-verified | 185/185 ✅ | n/a | n/a | Assistant service (9 tools, OpenAI tool-calling); API endpoint with safe logging; floating chat widget; all server files pass node --check; vite build 3183 modules |

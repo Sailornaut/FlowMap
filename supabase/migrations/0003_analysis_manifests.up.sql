@@ -84,6 +84,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists trg_analysis_manifests_no_update on public.analysis_manifests;
 create trigger trg_analysis_manifests_no_update
   before update on public.analysis_manifests
   for each row execute function public.reject_manifest_update();
@@ -97,6 +98,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists trg_analysis_manifests_no_delete on public.analysis_manifests;
 create trigger trg_analysis_manifests_no_delete
   before delete on public.analysis_manifests
   for each row execute function public.reject_manifest_delete();
@@ -108,6 +110,7 @@ create trigger trg_analysis_manifests_no_delete
 alter table public.analysis_manifests enable row level security;
 
 -- Staff can read manifests
+drop policy if exists "analysis_manifests_staff_select" on public.analysis_manifests;
 create policy "analysis_manifests_staff_select" on public.analysis_manifests
   for select using (public.is_internal_staff());
 

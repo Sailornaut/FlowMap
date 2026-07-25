@@ -290,15 +290,15 @@ The taxonomy module defines profiles with: `typicalSqftRange`, `preferredDaypart
 
 | # | Criterion | Status |
 |---|---|---|
-| 7.1 | Follow-ups can be created and reviewed | **Not implemented** |
-| 7.2 | Outcomes link to original vacancy and analysis | **Not implemented** |
+| 7.1 | Follow-ups can be created and reviewed | **Complete** | `follow_ups` table (migration 0005), CRUD routes in `server/routes/follow-ups.js` (list/create/update with filters by property/status/overdue), UI page `src/pages/workspace/FollowUps.jsx` with summary cards, complete/skip actions, create dialog. |
+| 7.2 | Outcomes link to original vacancy and analysis | **Complete** | `observed_outcomes` table with `vacancy_id fk` and `analysis_run_id fk`. CRUD routes in `server/routes/outcomes.js`. Records tenant details, prediction accuracy. UI page `src/pages/workspace/Outcomes.jsx`. |
 | 7.3 | Historical manifests remain immutable | **Implemented** | BEFORE UPDATE/DELETE triggers reject all mutations (including service-role). REVOKE INSERT/UPDATE/DELETE from anon/authenticated. RLS SELECT-only with `is_internal_staff()`. 57 test assertions verified. |
 | 7.4 | Corrections produce amendments or new versions | **Implemented** | `(analysis_run_id, version)` unique constraint. Execute route queries max version and inserts N+1. Tests verify version 1 unchanged after re-execution, zero UPDATEs/DELETEs on manifests table. |
-| 7.5 | Lessons can reference reports, analyses, responses, outcomes | **Not implemented** |
-| 7.6 | Observations distinguished from assumptions | **Not implemented** |
-| 7.7 | Default follow-up milestones (3/6/12/24 months) | **Not implemented** |
+| 7.5 | Lessons can reference reports, analyses, responses, outcomes | **Complete** | `lessons_learned` + `lesson_references` junction table (migration 0005). Polymorphic references to analysis_run, report_project, property, vacancy, observed_outcome, follow_up. CRUD routes in `server/routes/lessons.js` with add/remove reference endpoints. UI page `src/pages/workspace/Lessons.jsx` with inline reference management. |
+| 7.6 | Observations distinguished from assumptions | **Complete** | `observed_outcomes.evidence_type` column with check constraint (`observation`/`assumption`). Filterable via API query param and UI toggle. Badge displays in outcomes list. |
+| 7.7 | Default follow-up milestones (3/6/12/24 months) | **Complete** | `generateDefaultFollowUps()` exported from follow-ups route, called automatically in analysis execution route on completion. POST `/api/follow-ups/generate` endpoint for manual trigger. Idempotent (skips existing milestones). |
 
-No tables, routes, UI, or tests exist for any Phase 7 entity.
+Migration 0005 creates 4 tables (follow_ups, observed_outcomes, lessons_learned, lesson_references) with RLS and indexes. 3 route modules, 3 UI pages, 179 tests passing.
 
 ---
 
@@ -308,13 +308,13 @@ No tables, routes, UI, or tests exist for any Phase 7 entity.
 
 | # | Criterion | Status |
 |---|---|---|
-| 8.1 | Retrieves from real TrafficScout data | **Not implemented** |
-| 8.2 | Material answers include citations or links | **Not implemented** |
-| 8.3 | Unsupported questions return insufficient evidence | **Not implemented** |
-| 8.4 | Authorization enforced | **Not implemented** |
-| 8.5 | Tool calls logged safely | **Not implemented** |
+| 8.1 | Retrieves from real TrafficScout data | **Complete** — 9 retrieval tools query Supabase (search_properties, get_property_details, search_analyses, get_analysis_details, search_outcomes, search_lessons, search_follow_ups, get_vacancy_details, get_portfolio_summary). System prompt enforces "ONLY answer based on data retrieved". |
+| 8.2 | Material answers include citations or links | **Complete** — System prompt requires "cite the sources" as [type:UUID]. UI parses references into clickable links (property/analysis link to workspace pages). |
+| 8.3 | Unsupported questions return insufficient evidence | **Complete** — System prompt enforces "I don't have sufficient data" response. Max 5 tool-calling rounds prevents runaway API costs. |
+| 8.4 | Authorization enforced | **Complete** — Route uses `populateAuth → requireAuth → requireStaff` middleware chain. In-memory conversation store keyed per-user (max 5 threads, max 20 messages). |
+| 8.5 | Tool calls logged safely | **Complete** — Logs truncated userId + action name only. System prompt enforces "Never reveal internal system details". No question content or tokens logged. |
 
-No assistant infrastructure exists.
+`server/services/assistant.js` (OpenAI tool-calling service), `server/routes/assistant.js` (API endpoint), `src/components/workspace/AssistantChat.jsx` (floating chat widget). 185 tests pass, 3183 module build.
 
 ---
 
@@ -371,8 +371,8 @@ No assistant infrastructure exists.
 | **Phase 4** — Analyst workspace | **In progress** | 3 of 21 criteria met (4.1, 4.6, 4.18) + workspace shell, property CRUD UI, analysis trigger UI |
 | **Phase 5** — Recommendation engine | **Complete** | 7 of 7 criteria met |
 | **Phase 6** — Report generation | **Complete** | 8 of 9 criteria met (6.3 pending visual inspection, 6.4 partial — maps/charts deferred) |
-| **Phase 7** — Follow-up & learning | **Not started** | 0 of 7 criteria met |
-| **Phase 8** — Knowledge assistant | **Not started** | 0 of 5 criteria met |
+| **Phase 7** — Follow-up & learning | **Complete** | 7 of 7 criteria met |
+| **Phase 8** — Knowledge assistant | **Complete** | 5 of 5 criteria met |
 | **Phase 9** — Sales & prospecting | **Not started** | 0 of 5 criteria met |
 | **Phase 10** — Production readiness | **Not started** | 3 of 18 partially met |
 

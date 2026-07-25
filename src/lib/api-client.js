@@ -457,3 +457,25 @@ export async function removeLessonReference(lessonId, refId) {
   if (!response.ok) throw new Error(payload.error || "Could not remove reference.");
   return payload;
 }
+
+// ── Assistant ───────────────────────────────────────────────────────
+
+export async function askAssistant(question, threadId) {
+  const response = await apiFetch("/api/assistant/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, thread_id: threadId || undefined }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Assistant request failed.");
+  return payload;
+}
+
+export async function clearAssistantThread(threadId) {
+  const response = await apiFetch(`/api/assistant/threads/${threadId}`, {
+    method: "DELETE",
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not clear thread.");
+  return payload;
+}

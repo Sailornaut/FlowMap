@@ -1,4 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import AssistantChat from "@/components/workspace/AssistantChat";
 import {
   BookOpen,
   Building2,
@@ -103,6 +104,9 @@ export default function WorkspaceLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Assistant chat widget */}
+      <AssistantChat />
 
       {/* Mobile bottom nav */}
       <nav

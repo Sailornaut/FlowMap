@@ -258,3 +258,38 @@ export async function listVacancies(propertyId) {
 
   return payload;
 }
+
+// ── Reports ──────────────────────────────────────────────────────────
+
+export async function generateReport(analysisId) {
+  const response = await apiFetch(`/api/reports/generate/${analysisId}`, {
+    method: "POST",
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not generate report.");
+  }
+
+  return payload;
+}
+
+export function getReportDownloadUrl(reportVersionId) {
+  const base = import.meta.env.VITE_API_URL || "";
+  return `${base}/api/reports/${reportVersionId}/download`;
+}
+
+export async function listReports({ property_id, analysis_run_id } = {}) {
+  const params = new URLSearchParams();
+  if (property_id) params.set("property_id", property_id);
+  if (analysis_run_id) params.set("analysis_run_id", analysis_run_id);
+  const qs = params.toString();
+  const response = await apiFetch(`/api/reports${qs ? `?${qs}` : ""}`);
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not list reports.");
+  }
+
+  return payload;
+}

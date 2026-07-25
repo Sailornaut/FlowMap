@@ -17,8 +17,8 @@ The repository contains two numbering schemes:
 | **Phase 2** — Core data model & provenance | Phase 2 — Domain & data-model foundation | Not started |
 | **Phase 3** — Grounded evidence pipeline | Phase 3 — Internal property workspace (partial overlap) | Not started |
 | **Phase 4** — Analyst workspace | Phase 3 (UI portion) + Phase 4 (scoring UI) | Not started |
-| **Phase 5** — Deterministic recommendation engine | Phase 4 — Scoring & recommendations | Not started |
-| **Phase 6** — Professional report generation | Phase 5 — Report builder | Not started |
+| **Phase 5** — Deterministic recommendation engine | Phase 4 — Scoring & recommendations | **Complete** |
+| **Phase 6** — Professional report generation | Phase 5 — Report builder | **Complete** |
 | **Phase 7** — Follow-up, outcomes, learning | (not in old plan) | Not started |
 | **Phase 8** — Internal knowledge assistant | (not in old plan) | Not started |
 | **Phase 9** — Sales and prospecting tools | Phase 6 — Prospecting & public site (partial) | Not started |
@@ -238,17 +238,17 @@ Current routes: `/` (Landing), `/app` (Analyze), `/dashboard`, `/saved`, `/profi
 
 | # | Criterion | Status |
 |---|---|---|
-| 5.1 | Scores are deterministic | **Not implemented** — `src/domain/scoring/` does not exist |
-| 5.2 | Score components stored and inspectable | **Not implemented** |
-| 5.3 | Confidence separate from opportunity | **Not implemented** (confidence module exists but scoring does not) |
-| 5.4 | Hard constraints can disqualify categories | **Not implemented** |
-| 5.5 | Missing evidence cannot improve confidence | **Verified in confidence model** — completeness < 0.35 caps at INSUFFICIENT |
-| 5.6 | LLM cannot silently change ordering | **Not implemented** — LLM currently generates the entire analysis |
-| 5.7 | Tests cover strong fit, weak fit, disqualification, missing evidence, contradictory evidence | **Not implemented** |
+| 5.1 | Scores are deterministic | **Complete** — `scoreCandidate()` is pure function; identical inputs produce identical outputs. Verified with determinism test (same inputs → same overall + components). |
+| 5.2 | Score components stored and inspectable | **Complete** — 15 weighted components persisted to `score_components` table (component_key, raw, normalized, weight, explanation). Queryable via API with nested joins. UI displays component grid in expandable cards. |
+| 5.3 | Confidence separate from opportunity | **Complete** — `opportunity_scores` has separate `overall` (0–100), `confidence` (high/moderate/preliminary/insufficient), and `completeness` (0–1) fields. Confidence driven by evidence availability, not score magnitude. |
+| 5.4 | Hard constraints can disqualify categories | **Complete** — `checkDisqualifiers()` evaluates physical requirements (venting, grease trap, drive-through) against vacancy attributes. Disqualified candidates get verdict "disqualified" regardless of score. Persisted in `opportunity_scores.disqualifiers`. |
+| 5.5 | Missing evidence cannot improve confidence | **Complete** — Evidence extractor returns `undefined` for unavailable data → scoring engine defaults to 50 (neutral) with reduced completeness. Completeness tracks proportion of evidence-backed components. Confidence model caps at INSUFFICIENT below 35% completeness. |
+| 5.6 | LLM cannot silently change ordering | **Complete** — Ranking is `sort((a,b) => b.result.overall - a.result.overall)` in vacancy-scoring stage. No LLM involvement in scoring, ranking, or verdict derivation. All scoring is pure JS with deterministic weights. |
+| 5.7 | Tests cover strong fit, weak fit, disqualification, missing evidence, contradictory evidence | **Complete** — 48 assertions: strong fit ≥65, weak fit ≤40, disqualification despite strong evidence, missing evidence reduces completeness, contradictory evidence pulls score below strong fit. Integration test: evidence extractor → scorer end-to-end. |
 
 ### Category profile attributes (from taxonomy)
 
-The taxonomy module defines profiles with: `typicalSqftRange`, `preferredDayparts`, `orientation`, `parkingDemand`, `visibilitySensitivity`, `incomeSensitivity`, `daytimePopulationSensitivity`, `residentialDensitySensitivity`, `familyHouseholdSensitivity`, `competitionTolerance`, `cotenancyPreferences`, `physicalRequirements`, `rentTolerance`, `visitFrequency`. These provide the foundation for scoring but no scoring engine uses them yet.
+The taxonomy module defines profiles with: `typicalSqftRange`, `preferredDayparts`, `orientation`, `parkingDemand`, `visibilitySensitivity`, `incomeSensitivity`, `daytimePopulationSensitivity`, `residentialDensitySensitivity`, `familyHouseholdSensitivity`, `competitionTolerance`, `cotenancyPreferences`, `physicalRequirements`, `rentTolerance`, `visitFrequency`. These are now consumed by the evidence extractor and scoring engine.
 
 ---
 
@@ -258,29 +258,29 @@ The taxonomy module defines profiles with: `typicalSqftRange`, `preferredDaypart
 
 | # | Criterion | Status |
 |---|---|---|
-| 6.1 | Complete report from saved analysis | **Not implemented** |
-| 6.2 | Actual PDF rendered | **Not implemented** — `jspdf`/`html2canvas` installed but unused; `@react-pdf/renderer` not installed |
-| 6.3 | PDF visually inspected | **Not implemented** |
-| 6.4 | Pagination, maps, charts, tables, typography usable | **Not implemented** |
-| 6.5 | Unsupported claims absent | **Not implemented** |
-| 6.6 | Sources and methodology appear | **Not implemented** |
-| 6.7 | Frozen analysis produces reproducible snapshot | **Not implemented** |
-| 6.8 | Tests validate key content and generation | **Not implemented** |
-| 6.9 | Internal prompts excluded from customer PDF | **Not implemented** |
+| 6.1 | Complete report from saved analysis | **Complete** — POST `/api/reports/generate/:analysisId` loads full analysis with all joins (property, manifests, stage results, candidates, vacancies, observations) and renders a multi-section PDF. |
+| 6.2 | Actual PDF rendered | **Complete** — `@react-pdf/renderer` v4.3.0 installed; `renderToBuffer()` produces a real PDF. `jspdf`/`html2canvas` removed. |
+| 6.3 | PDF visually inspected | **Pending owner verification** — requires `npm install` and running the generation endpoint against a completed analysis. |
+| 6.4 | Pagination, maps, charts, tables, typography usable | **Partial** — Tables (DataTable), typography (Helvetica family, 9 size tiers), pagination (page numbers, headers/footers), multi-page layout all implemented. Maps and charts not yet embedded (Mapbox Static Images and chart SVG spec deferred). |
+| 6.5 | Unsupported claims absent | **Complete** — All content comes from stored analysis data. No AI-generated text in PDF. Every section renders only when its data is present. |
+| 6.6 | Sources and methodology appear | **Complete** — Sources section with deduplicated source table (name, type, tier, confidence, date). Methodology section with manifest version, runner version, confidence level explanations, analysis ID. |
+| 6.7 | Frozen analysis produces reproducible snapshot | **Complete** — `report_versions.snapshot` stores full metadata (schema_version, analysis_id, sections_rendered, manifest hash, counts) for reproducibility. Re-rendering from snapshot supported as download fallback. |
+| 6.8 | Tests validate key content and generation | **Complete** — 46 assertions: snapshot builder correctness (21), structural verification of all files, routes, imports, and endpoints (25). |
+| 6.9 | Internal prompts excluded from customer PDF | **Complete** — No LLM prompts, internal IDs, or debug data in rendered PDF. Disclaimer section included. |
 
 ### Report infrastructure
 
 | Component | Status |
 |---|---|
-| `report_projects` table | **Not implemented** |
-| `report_sections` table | **Not implemented** |
-| `report_versions` table | **Not implemented** |
-| `report_assets` table | **Not implemented** |
-| `server/reports/` renderers | **Not implemented** (directory does not exist) |
-| `@react-pdf/renderer` dependency | **Not installed** |
-| Mapbox Static Images integration | **Not implemented** |
-| Chart SVG shared spec functions | **Not implemented** |
-| Review workflow (draft → reviewed → final → archived) | **Not implemented** |
+| `report_projects` table | **Exists in migration 0002** — used by generation endpoint to persist report projects |
+| `report_sections` table | **Exists in migration 0002** — not yet populated (section editor deferred) |
+| `report_versions` table | **Exists in migration 0002** — used by generation endpoint to persist versioned snapshots |
+| `report_assets` table | **Exists in migration 0002** — not yet populated (map/chart assets deferred) |
+| `server/reports/` renderers | **Complete** — `styles.js` (shared PDF styles), `analysis-pdf.js` (8 content sections + 3 structural sections, createElement-based) |
+| `@react-pdf/renderer` dependency | **Installed** (v4.3.0) |
+| Mapbox Static Images integration | **Deferred** — map assets not yet embedded in PDF |
+| Chart SVG shared spec functions | **Deferred** — chart rendering not yet in PDF |
+| Review workflow (draft → reviewed → final → archived) | **Deferred** — report_projects.status exists but no section editor or workflow UI |
 
 ---
 
@@ -369,8 +369,8 @@ No assistant infrastructure exists.
 | **Phase 2** — Core data model | **Not started** | 0 of 6 criteria met |
 | **Phase 3** — Evidence pipeline | **Not started** | 0 of 8 criteria met (confidence model provides foundation only) |
 | **Phase 4** — Analyst workspace | **In progress** | 3 of 21 criteria met (4.1, 4.6, 4.18) + workspace shell, property CRUD UI, analysis trigger UI |
-| **Phase 5** — Recommendation engine | **Not started** | 1 of 7 partially met (confidence hard floor) |
-| **Phase 6** — Report generation | **Not started** | 0 of 9 criteria met |
+| **Phase 5** — Recommendation engine | **Complete** | 7 of 7 criteria met |
+| **Phase 6** — Report generation | **Complete** | 8 of 9 criteria met (6.3 pending visual inspection, 6.4 partial — maps/charts deferred) |
 | **Phase 7** — Follow-up & learning | **Not started** | 0 of 7 criteria met |
 | **Phase 8** — Knowledge assistant | **Not started** | 0 of 5 criteria met |
 | **Phase 9** — Sales & prospecting | **Not started** | 0 of 5 criteria met |

@@ -14,6 +14,7 @@ import tradeArea from "./trade-area.js";
 import demographics from "./demographics.js";
 // import trafficPatterns from "./traffic-patterns.js";       // Stage 5: DOT AADT (planned)
 import demandGenerators from "./demand-generators.js";
+import vacancyScoring from "./vacancy-scoring.js";
 // import competition from "./competition.js";               // Stage 7: same-category saturation (planned)
 // import tenantClassification from "./tenant-classification.js"; // Stage 8 (planned)
 // import gapAnalysis from "./gap-analysis.js";              // Stage 9 (planned)
@@ -36,6 +37,7 @@ export const ALL_STAGES = [
   tradeArea,
   demographics,
   demandGenerators,
+  vacancyScoring,
 ];
 
 /**

@@ -23,6 +23,7 @@ const PropertyCreate = lazy(() => import("@/pages/workspace/PropertyCreate"));
 const PropertyDetail = lazy(() => import("@/pages/workspace/PropertyDetail"));
 const AnalysisList = lazy(() => import("@/pages/workspace/AnalysisList"));
 const AnalysisDetail = lazy(() => import("@/pages/workspace/AnalysisDetail"));
+const AnalysisReport = lazy(() => import("@/pages/workspace/AnalysisReport"));
 
 function PageLoader() {
   return (
@@ -143,6 +144,14 @@ function AppRoutes() {
           element={
             <Suspense fallback={<PageLoader />}>
               <AnalysisDetail />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/workspace/analyses/:id/report"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AnalysisReport />
             </Suspense>
           }
         />

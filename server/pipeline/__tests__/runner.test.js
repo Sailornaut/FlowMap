@@ -61,10 +61,10 @@ describe("filterStagesByDepth", () => {
 
 describe("computeOverallConfidence", () => {
   it("returns insufficient when no stages completed", () => {
-    expect(computeOverallConfidence([])).toBe("insufficient");
+    expect(computeOverallConfidence([])).toEqual({ overall: "insufficient", dataQuality: "insufficient" });
     expect(
       computeOverallConfidence([{ status: "failed", confidence: "high" }])
-    ).toBe("insufficient");
+    ).toEqual({ overall: "insufficient", dataQuality: "insufficient" });
   });
 
   it("returns the worst confidence across completed stages", () => {
@@ -73,7 +73,7 @@ describe("computeOverallConfidence", () => {
       { status: "ok", confidence: "moderate" },
       { status: "ok", confidence: "high" },
     ];
-    expect(computeOverallConfidence(records)).toBe("moderate");
+    expect(computeOverallConfidence(records).overall).toBe("moderate");
   });
 
   it("ignores failed stages in confidence calculation", () => {
@@ -81,7 +81,7 @@ describe("computeOverallConfidence", () => {
       { status: "ok", confidence: "high" },
       { status: "failed", confidence: "insufficient" },
     ];
-    expect(computeOverallConfidence(records)).toBe("high");
+    expect(computeOverallConfidence(records).overall).toBe("high");
   });
 });
 

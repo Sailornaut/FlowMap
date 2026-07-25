@@ -14,6 +14,7 @@ import propertiesRouter from "./routes/properties.js";
 import tenantsRouter from "./routes/tenants.js";
 import vacanciesRouter from "./routes/vacancies.js";
 import analysesRouter from "./routes/analyses.js";
+import reportsRouter from "./routes/reports.js";
 
 dotenv.config({ path: "trafficscout-api.env" });
 dotenv.config({ path: ".env.local" });
@@ -123,7 +124,7 @@ app.use((request, response, next) => {
       "Access-Control-Allow-Headers",
       "Authorization, Content-Type, Stripe-Signature, baggage, sentry-trace"
     );
-    response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     response.setHeader("Access-Control-Max-Age", "86400");
     response.setHeader(
       "Access-Control-Expose-Headers",
@@ -1171,6 +1172,7 @@ app.use("/api/properties", populateAuth, requireAuth, requireStaff, propertiesRo
 app.use("/api/properties/:propertyId/tenants", populateAuth, requireAuth, requireStaff, tenantsRouter);
 app.use("/api/properties/:propertyId/vacancies", populateAuth, requireAuth, requireStaff, vacanciesRouter);
 app.use("/api/analyses", populateAuth, requireAuth, requireStaff, analysesRouter);
+app.use("/api/reports", populateAuth, requireAuth, requireStaff, reportsRouter);
 
 // ============================================================================
 // Error handler (must be last)

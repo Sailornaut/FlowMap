@@ -255,6 +255,7 @@ async function main() {
 
   console.log(`\n  Pipeline status: ${pipelineResult.status}`);
   console.log(`  Overall confidence: ${pipelineResult.overallConfidence}`);
+  console.log(`  Data quality confidence: ${pipelineResult.dataQualityConfidence}`);
   console.log(`  Total duration: ${pipelineResult.totalDurationMs}ms`);
   console.log(`  Total cost: $${pipelineResult.totalCost.toFixed(4)}`);
 

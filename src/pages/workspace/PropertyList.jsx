@@ -29,9 +29,9 @@ function PropertyCard({ property, onClick }) {
                 {property.property_type}
               </Badge>
             )}
-            {property.total_sqft && (
+            {property.total_gla_sqft && (
               <span className="text-xs text-muted-foreground">
-                {Number(property.total_sqft).toLocaleString()} sqft
+                {Number(property.total_gla_sqft).toLocaleString()} sqft
               </span>
             )}
           </div>

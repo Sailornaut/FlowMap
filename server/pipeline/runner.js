@@ -97,25 +97,58 @@ export function filterStagesByDepth(stages, depth) {
 }
 
 /**
+ * Stages classified as "data quality gates" rather than analytical stages.
+ * These stages assess input completeness and are reported separately.
+ * They do NOT cap the overall analytical confidence.
+ *
+ * Rationale: property-validation checks whether the property record is
+ * complete. A property missing lat/lng at creation gets "preliminary"
+ * from validation, but geo-enrichment then geocodes it successfully.
+ * Letting validation permanently cap the analysis would penalize the
+ * normal workflow where enrichment stages fill in missing data.
+ */
+const DATA_QUALITY_STAGES = new Set(["property-validation"]);
+
+/**
  * Determine overall confidence from individual stage confidences.
- * Uses the most conservative (worst) confidence across all completed stages.
+ *
+ * Aggregation rule:
+ *   1. Separate stages into "analytical" and "data quality" categories.
+ *   2. Overall confidence = minimum across completed analytical stages.
+ *   3. Data quality stages (e.g. property-validation) are excluded from
+ *      the overall calculation but reported in `dataQualityConfidence`.
+ *   4. If no analytical stages completed, fall back to data quality.
+ *   5. If nothing completed, return "insufficient".
+ *
  * @param {StageRecord[]} stageRecords
- * @returns {string}
+ * @returns {{ overall: string, dataQuality: string }}
  */
 export function computeOverallConfidence(stageRecords) {
   const levels = ["insufficient", "preliminary", "moderate", "high"];
   const completed = stageRecords.filter((s) => s.status === "ok");
 
-  if (completed.length === 0) return "insufficient";
+  if (completed.length === 0) return { overall: "insufficient", dataQuality: "insufficient" };
 
-  let worstIndex = levels.length - 1;
-  for (const stage of completed) {
-    const idx = levels.indexOf(stage.confidence);
-    if (idx >= 0 && idx < worstIndex) {
-      worstIndex = idx;
+  const analytical = completed.filter((s) => !DATA_QUALITY_STAGES.has(s.stageName));
+  const dataQuality = completed.filter((s) => DATA_QUALITY_STAGES.has(s.stageName));
+
+  function worstConfidence(stages) {
+    if (stages.length === 0) return "insufficient";
+    let worst = levels.length - 1;
+    for (const stage of stages) {
+      const idx = levels.indexOf(stage.confidence);
+      if (idx >= 0 && idx < worst) worst = idx;
     }
+    return levels[worst];
   }
-  return levels[worstIndex];
+
+  const analyticalConfidence = worstConfidence(analytical);
+  const dqConfidence = worstConfidence(dataQuality);
+
+  // If no analytical stages completed, fall back to data quality
+  const overall = analytical.length > 0 ? analyticalConfidence : dqConfidence;
+
+  return { overall, dataQuality: dqConfidence };
 }
 
 /**
@@ -125,11 +158,13 @@ export function computeOverallConfidence(stageRecords) {
  * @param {StageContext} initialContext      Starting context (property, tenants, vacancies, etc.)
  * @param {object} [options]
  * @param {string} [options.depth]          Analysis depth ("teaser"|"standard"|"full"), default "full"
+ * @param {number} [options.stageTimeoutMs]  Per-stage timeout in ms (default: 60_000)
  * @param {(record: StageRecord) => Promise<void>} [options.onStageComplete]  Callback after each stage
  * @returns {Promise<PipelineResult>}
  */
 export async function runPipeline(stages, initialContext, options = {}) {
   const depth = options.depth || "full";
+  const stageTimeoutMs = options.stageTimeoutMs || 60_000;
   const onStageComplete = options.onStageComplete || null;
 
   const activeStages = filterStagesByDepth(stages, depth);
@@ -155,7 +190,14 @@ export async function runPipeline(stages, initialContext, options = {}) {
     let record;
 
     try {
-      const result = await stage.run(ctx);
+      // Run with a timeout to prevent a single slow external API from
+      // blocking the entire pipeline indefinitely.
+      const result = await Promise.race([
+        stage.run(ctx),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Stage "${stage.name}" timed out after ${stageTimeoutMs}ms`)), stageTimeoutMs)
+        ),
+      ]);
       const durationMs = Date.now() - stageStart;
 
       record = {
@@ -214,11 +256,14 @@ export async function runPipeline(stages, initialContext, options = {}) {
     status = "failed";
   }
 
+  const confidenceResult = computeOverallConfidence(records);
+
   return {
     status,
     stages: records,
     totalCost,
     totalDurationMs,
-    overallConfidence: computeOverallConfidence(records),
+    overallConfidence: confidenceResult.overall,
+    dataQualityConfidence: confidenceResult.dataQuality,
   };
 }

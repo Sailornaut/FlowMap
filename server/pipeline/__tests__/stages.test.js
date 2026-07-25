@@ -390,7 +390,7 @@ describe("demand-generators stage", () => {
 
   it("fetches POIs via places service", async () => {
     const mockPlaces = {
-      providerName: "osm",
+      providerName: "osm_overpass",
       searchNearby: async () => [
         { name: "Lincoln High School", category: "school", lat: 41.58, lng: -93.63, distance_m: 400 },
         { name: "Mercy Hospital", category: "hospital", lat: 41.59, lng: -93.62, distance_m: 800 },
@@ -402,7 +402,7 @@ describe("demand-generators stage", () => {
     const ctx = baseCtx({ services: { places: mockPlaces } });
     const result = await demandGenerators.run(ctx);
     expect(result.outputs.total_pois).toBe(5);
-    expect(result.outputs.provider).toBe("osm");
+    expect(result.outputs.provider).toBe("osm_overpass");
     expect(Object.keys(result.outputs.category_summary).length).toBe(5);
     expect(result.outputs.category_summary.school.count).toBe(1);
     expect(result.confidence).toBe("moderate");
@@ -425,7 +425,7 @@ describe("demand-generators stage", () => {
 
   it("handles zero POI results", async () => {
     const mockPlaces = {
-      providerName: "osm",
+      providerName: "osm_overpass",
       searchNearby: async () => [],
     };
     const ctx = baseCtx({ services: { places: mockPlaces } });

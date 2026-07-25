@@ -67,7 +67,7 @@ export default function WorkspaceLayout() {
 
         <div className="px-2 mt-auto space-y-1">
           <button
-            onClick={() => navigate("/workspace/profile")}
+            onClick={() => navigate("/profile")}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <User className="w-4 h-4 shrink-0" />

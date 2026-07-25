@@ -120,6 +120,10 @@ const stage = {
         };
       }
 
+      // Extract provenance metadata before mapping
+      const acsYear = acsData._acs_year || "unknown";
+      const acsDataset = acsData._acs_dataset || "acs/acs5";
+
       // Map variable codes back to readable names
       const demographics = {};
       let presentCount = 0;
@@ -144,7 +148,7 @@ const stage = {
       observations.push({
         source_name: "census_acs_5yr",
         source_kind: "api",
-        source_url_or_id: `census:acs5:${tract.state_fips}${tract.county_fips}${tract.tract}`,
+        source_url_or_id: `census:acs5:${acsYear}:${tract.state_fips}${tract.county_fips}${tract.tract}`,
         retrieved_at: new Date().toISOString(),
         raw_value: acsData,
         normalized_value: demographics,
@@ -160,7 +164,9 @@ const stage = {
           tract_fips: `${tract.state_fips}${tract.county_fips}${tract.tract}`,
           demographics,
           geographic_scope: "tract",
-          data_year: "ACS 5-year (latest available)",
+          acs_year: acsYear,
+          acs_dataset: acsDataset,
+          data_year: `ACS 5-year ${acsYear}`,
         },
         observations,
         confidence: completeness >= 0.7 ? "high" : completeness >= 0.4 ? "moderate" : "preliminary",

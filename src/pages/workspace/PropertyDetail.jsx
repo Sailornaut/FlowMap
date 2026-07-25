@@ -104,10 +104,20 @@ export default function PropertyDetail() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => createAnalysis(data),
-    onSuccess: () => {
+    mutationFn: async (data) => {
+      const run = await createAnalysis(data);
+      // Auto-execute the new run
+      try {
+        await executeAnalysis(run.id);
+      } catch {
+        // Execution errors are non-fatal — the run is created and can be executed later
+      }
+      return run;
+    },
+    onSuccess: (run) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-analyses", { property_id: id }] });
-      toast.success("Analysis created");
+      toast.success("Analysis started");
+      navigate(`/workspace/analyses/${run.id}`);
     },
     onError: (err) => toast.error(err.message),
   });

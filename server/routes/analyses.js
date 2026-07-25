@@ -55,7 +55,7 @@ router.get("/:id", async (req, res) => {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("analysis_runs")
-      .select("*, properties(name, address), analysis_stage_results(*)")
+      .select("*, properties(name, address, city, state, postal_code), analysis_stage_results(*)")
       .eq("id", req.params.id)
       .maybeSingle();
 
@@ -63,6 +63,31 @@ router.get("/:id", async (req, res) => {
     if (!data) {
       return res.status(404).json({ error: "Analysis run not found." });
     }
+
+    // Fetch manifests (immutable provenance records)
+    const { data: manifests } = await supabase
+      .from("analysis_manifests")
+      .select("id, version, depth, overall_confidence, runner_version, total_cost_usd, stages_planned, stages_completed, data_sources_used, created_at")
+      .eq("analysis_run_id", data.id)
+      .order("version", { ascending: false });
+
+    // Fetch source observations for this run
+    const { data: observations } = await supabase
+      .from("source_observations")
+      .select("id, source_url_or_id, retrieved_at, raw_value, normalized_value, unit, confidence, subject_type, data_sources(name, kind, reliability_tier)")
+      .eq("analysis_run_id", data.id)
+      .order("retrieved_at");
+
+    // Fetch business candidates with scores
+    const { data: candidates } = await supabase
+      .from("business_candidates")
+      .select("id, rank, verdict, tenant_categories(slug, name, sector), opportunity_scores(overall, confidence, completeness, positive_factors, negative_factors, disqualifiers, score_components(component_key, normalized, weight, explanation))")
+      .eq("analysis_run_id", data.id)
+      .order("rank", { ascending: true });
+
+    data.analysis_manifests = manifests || [];
+    data.source_observations = observations || [];
+    data.business_candidates = candidates || [];
 
     res.json(data);
   } catch (error) {
@@ -240,11 +265,41 @@ router.post("/:id/execute", async (req, res) => {
       return res.status(404).json({ error: "Analysis run not found." });
     }
 
+    // Pre-flight status checks
     if (run.status === "running") {
       return res.status(409).json({ error: "Analysis is already running." });
     }
     if (run.status === "complete") {
-      return res.status(409).json({ error: "Analysis already complete. Create a new run to re-analyze." });
+      return res.status(409).json({
+        error: "Analysis already complete. Create a new run to re-analyze.",
+        code: "already_complete",
+      });
+    }
+    if (run.status === "partial") {
+      return res.status(409).json({
+        error: "Analysis partially complete. Create a new run to re-analyze.",
+        code: "already_partial",
+      });
+    }
+
+    // Atomic status transition: only claim the run if it is still queued/failed.
+    // This prevents a race where two concurrent requests both pass the check above.
+    const { data: claimed, error: claimError } = await supabase
+      .from("analysis_runs")
+      .update({
+        status: "running",
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", run.id)
+      .in("status", ["queued", "failed"])
+      .select("id")
+      .maybeSingle();
+
+    if (claimError) throw claimError;
+    if (!claimed) {
+      // Another request claimed it between our SELECT and UPDATE
+      return res.status(409).json({ error: "Analysis is already running or complete." });
     }
 
     // Load property with tenants and vacancies
@@ -269,12 +324,6 @@ router.post("/:id/execute", async (req, res) => {
       .select("*")
       .eq("property_id", run.property_id);
 
-    // Mark as running
-    await supabase
-      .from("analysis_runs")
-      .update({ status: "running", started_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("id", run.id);
-
     // Build pipeline context with live service clients.
     // Each factory returns null if its required config is missing — the
     // corresponding stage degrades gracefully to insufficient confidence.
@@ -287,6 +336,7 @@ router.post("/:id/execute", async (req, res) => {
     if (census) services.census = census;
     const places = createOverpassService();
     if (places) services.places = places;
+    services.supabase = supabase;
 
     const pipelineCtx = {
       property,
@@ -472,6 +522,7 @@ router.post("/:id/execute", async (req, res) => {
       stages_completed: stagesCompleted,
       data_sources_used: dataSourcesUsed,
       overall_confidence: pipelineResult.overallConfidence,
+      data_quality_confidence: pipelineResult.dataQualityConfidence,
       total_cost_usd: pipelineResult.totalCost,
     };
 
@@ -500,10 +551,31 @@ router.post("/:id/execute", async (req, res) => {
       })),
       totalCost: pipelineResult.totalCost,
       overallConfidence: pipelineResult.overallConfidence,
+      dataQualityConfidence: pipelineResult.dataQualityConfidence,
     });
   } catch (error) {
     reportServerError(error, { route: { path: `/api/analyses/${req.params.id}/execute`, method: "POST" } });
-    res.status(500).json({ error: error?.message || "Could not execute analysis." });
+
+    // If a run was claimed but the pipeline threw unexpectedly, mark it as failed
+    // so it doesn't stay stuck in "running" forever.
+    try {
+      const supabase = getSupabaseAdmin();
+      await supabase
+        .from("analysis_runs")
+        .update({
+          status: "failed",
+          error: "Pipeline execution failed unexpectedly.",
+          finished_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", req.params.id)
+        .eq("status", "running"); // only if still running
+    } catch (cleanupErr) {
+      reportServerError(cleanupErr, { context: "execute cleanup (non-fatal)" });
+    }
+
+    // Return a safe error message — do not leak internal details
+    res.status(500).json({ error: "Could not execute analysis. The run has been marked as failed." });
   }
 });
 

@@ -111,6 +111,10 @@ export function createCensusService() {
             : null;
         }
 
+        // Attach metadata for provenance — which dataset year actually responded
+        result._acs_year = year;
+        result._acs_dataset = `${ACS_SUFFIX}`;
+
         return result;
       }
 

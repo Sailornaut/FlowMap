@@ -89,7 +89,7 @@ function validateGeocode(property) {
   const lng = property.lng;
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    issues.push("Missing or invalid coordinates — geocoding required");
+    issues.push("Missing coordinates — will attempt geocoding from address");
     return { valid: false, issues };
   }
 
@@ -127,9 +127,11 @@ const stage = {
     const geocode = validateGeocode(property);
     if (!geocode.valid) {
       for (const issue of geocode.issues) {
-        if (issue.includes("Missing")) {
-          errors.push(issue);
+        if (issue.includes("outside continental US")) {
+          warnings.push(issue);
         } else {
+          // Missing coordinates are a warning, not an error —
+          // geo-enrichment stage will attempt geocoding from address.
           warnings.push(issue);
         }
       }

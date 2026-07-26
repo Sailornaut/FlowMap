@@ -510,16 +510,65 @@ function TenantRecommendationsSection(candidates, stageOutputs) {
         ),
       ));
 
+      // Strengths (raw positive_factors from scoring engine)
+      const positives = score?.positive_factors || [];
+      if (positives.length > 0) {
+        parts.push(h(View, { style: styles.mb4 },
+          h(Text, { style: [styles.small, styles.bold, { color: COLORS.success, marginBottom: 2 }] }, "Strengths"),
+          ...positives.map((f) => EvidencePositive(f)),
+        ));
+      }
+
+      // Concerns (raw negative_factors from scoring engine)
+      const negatives = score?.negative_factors || [];
+      if (negatives.length > 0) {
+        parts.push(h(View, { style: styles.mb4 },
+          h(Text, { style: [styles.small, styles.bold, { color: COLORS.warning, marginBottom: 2 }] }, "Concerns"),
+          ...negatives.map((f) => EvidenceNegative(f)),
+        ));
+      }
+
       // Score breakdown bars
       if (breakdown.length > 0) {
         parts.push(h(View, { style: styles.mb4 },
+          h(Text, { style: [styles.small, styles.bold, { marginBottom: 2 }] }, "Score Breakdown"),
           ...breakdown.filter((b) => b.maxScore > 0).map((b) =>
             ScoreBar(b.label, b.score, b.maxScore)
           ),
         ));
       }
 
-      // Supporting evidence
+      // Component scores grid (raw normalized values per component)
+      const components = score?.score_components || [];
+      if (components.length > 0) {
+        const sorted = [...components].sort(
+          (a, b) => (b.normalized || 0) * (b.weight || 0) - (a.normalized || 0) * (a.weight || 0)
+        );
+        parts.push(h(View, { style: styles.mb4 },
+          h(Text, { style: [styles.small, styles.bold, { marginBottom: 2 }] }, "Component Scores"),
+          h(View, { style: { flexDirection: "row", flexWrap: "wrap" } },
+            ...sorted.map((c) =>
+              h(View, {
+                key: c.component_key,
+                style: {
+                  width: "33%",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingVertical: 1,
+                  paddingHorizontal: 4,
+                },
+              },
+                h(Text, { style: [styles.small, { color: COLORS.muted }] },
+                  (c.component_key || "").replace(/_/g, " ")
+                ),
+                h(Text, { style: [styles.small, styles.bold] }, `${c.normalized ?? "–"}`),
+              )
+            ),
+          ),
+        ));
+      }
+
+      // Narrative evidence (generated interpretations)
       if (supporting.length > 0) {
         parts.push(h(View, { style: styles.mb4 },
           h(Text, { style: [styles.small, styles.bold, { color: COLORS.success, marginBottom: 2 }] }, "Supporting Evidence"),
@@ -527,7 +576,7 @@ function TenantRecommendationsSection(candidates, stageOutputs) {
         ));
       }
 
-      // Potential concerns
+      // Narrative concerns
       if (concerns.length > 0) {
         parts.push(h(View, { style: styles.mb4 },
           h(Text, { style: [styles.small, styles.bold, { color: COLORS.warning, marginBottom: 2 }] }, "Potential Concerns"),

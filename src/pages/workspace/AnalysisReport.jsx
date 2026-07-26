@@ -311,6 +311,73 @@ function DemandGeneratorsSection({ stages }) {
   );
 }
 
+function ReportCandidateCard({ candidate }) {
+  const cat = candidate.tenant_categories;
+  const score = candidate.opportunity_scores?.[0];
+  if (!score || !cat) return null;
+
+  const overall = Number(score.overall);
+  const barColor = overall >= 65 ? "bg-green-500" : overall >= 40 ? "bg-yellow-500" : "bg-red-400";
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-3 mb-3 print:break-inside-avoid">
+      {/* Header row */}
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-lg font-semibold w-10 text-center">{overall}</span>
+        <div className="w-20 h-2 rounded-full bg-gray-100 overflow-hidden shrink-0">
+          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${overall}%` }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">#{candidate.rank} {cat.name}</p>
+          <p className="text-xs text-gray-500 capitalize">{cat.sector?.replace(/_/g, " ")}</p>
+        </div>
+        <div className="text-xs text-gray-500 text-right shrink-0">
+          <span className="capitalize">{score.confidence || "–"}</span>
+          <span className="mx-1">·</span>
+          <span>{Math.round((score.completeness || 0) * 100)}%</span>
+        </div>
+      </div>
+
+      {/* Strengths */}
+      {score.positive_factors?.length > 0 && (
+        <div className="mb-2">
+          <p className="text-xs font-semibold text-green-700 mb-0.5">Strengths</p>
+          {score.positive_factors.map((f, i) => (
+            <p key={i} className="text-xs text-gray-600 ml-3">+ {f}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Risks */}
+      {score.negative_factors?.length > 0 && (
+        <div className="mb-2">
+          <p className="text-xs font-semibold text-red-700 mb-0.5">Concerns</p>
+          {score.negative_factors.map((f, i) => (
+            <p key={i} className="text-xs text-gray-600 ml-3">- {f}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Component scores grid */}
+      {score.score_components?.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 mb-1">Components</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+            {[...score.score_components]
+              .sort((a, b) => (b.normalized || 0) * (b.weight || 0) - (a.normalized || 0) * (a.weight || 0))
+              .map((c) => (
+                <div key={c.component_key} className="text-xs flex justify-between px-2 py-0.5 rounded bg-gray-50">
+                  <span className="text-gray-500 truncate mr-2">{c.component_key.replace(/_/g, " ")}</span>
+                  <span className="font-mono shrink-0">{c.normalized ?? "–"}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TenantRecommendations({ candidates }) {
   if (!candidates || candidates.length === 0) {
     return (
@@ -322,56 +389,71 @@ function TenantRecommendations({ candidates }) {
   }
 
   const recommended = candidates.filter(c => c.verdict === "recommend");
+  const neutral = candidates.filter(c => c.verdict !== "recommend" && c.verdict !== "disqualified");
   const disqualified = candidates.filter(c => c.verdict === "disqualified");
 
   return (
     <>
       <SectionTitle>7. Tenant recommendations</SectionTitle>
+      <p className="text-sm text-gray-700 mb-3">
+        {candidates.length} categories evaluated. {recommended.length} recommended, {neutral.length} neutral, {disqualified.length} disqualified.
+      </p>
+
+      {/* Recommended — full detail cards */}
       {recommended.length > 0 && (
-        <>
-          <p className="text-sm text-gray-700 mb-2">
-            {recommended.length} category(ies) recommended based on deterministic scoring of {candidates.length} evaluated candidates.
-          </p>
-          <table className="w-full text-sm mb-4">
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Recommended ({recommended.length})</p>
+          {recommended.slice(0, 15).map((c) => (
+            <ReportCandidateCard key={c.id} candidate={c} />
+          ))}
+          {recommended.length > 15 && (
+            <p className="text-xs text-gray-400">{recommended.length - 15} additional recommended categories not shown.</p>
+          )}
+        </div>
+      )}
+
+      {/* Neutral — compact list */}
+      {neutral.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Neutral ({neutral.length})</p>
+          <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 text-gray-500 text-xs">
+              <tr className="border-b border-gray-200 text-gray-500">
                 <th className="text-left py-1">Rank</th>
                 <th className="text-left py-1">Category</th>
-                <th className="text-left py-1">Sector</th>
                 <th className="text-right py-1">Score</th>
                 <th className="text-left py-1 pl-3">Confidence</th>
               </tr>
             </thead>
             <tbody>
-              {recommended.slice(0, 15).map((c) => {
+              {neutral.slice(0, 10).map((c) => {
                 const score = c.opportunity_scores?.[0];
                 return (
                   <tr key={c.id} className="border-b border-gray-100">
-                    <td className="py-1.5">#{c.rank}</td>
-                    <td className="py-1.5 font-medium">{c.tenant_categories?.name}</td>
-                    <td className="py-1.5 capitalize text-gray-500">{c.tenant_categories?.sector?.replace(/_/g, " ")}</td>
-                    <td className="py-1.5 text-right font-mono">{score?.overall ?? "–"}</td>
-                    <td className="py-1.5 pl-3 capitalize">{score?.confidence || "–"}</td>
+                    <td className="py-1">#{c.rank}</td>
+                    <td className="py-1">{c.tenant_categories?.name}</td>
+                    <td className="py-1 text-right font-mono">{score?.overall ?? "–"}</td>
+                    <td className="py-1 pl-3 capitalize">{score?.confidence || "–"}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </>
+        </div>
       )}
-      {recommended.length === 0 && (
-        <p className="text-sm text-gray-500 mb-4">No categories met the recommendation threshold.</p>
-      )}
+
+      {/* Disqualified */}
       {disqualified.length > 0 && (
         <div className="mb-2">
-          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Disqualified ({disqualified.length})</p>
+          <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">Disqualified ({disqualified.length})</p>
           {disqualified.slice(0, 10).map((c) => (
-            <p key={c.id} className="text-sm text-gray-600">
+            <p key={c.id} className="text-xs text-gray-600">
               {c.tenant_categories?.name}: {c.opportunity_scores?.[0]?.disqualifiers?.join("; ") || "Physical constraints"}
             </p>
           ))}
         </div>
       )}
+
       <p className="text-xs text-gray-400 mt-2">
         Scores computed deterministically from pipeline evidence. No AI-generated rankings.
       </p>

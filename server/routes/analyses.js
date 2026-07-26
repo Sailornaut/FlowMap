@@ -545,7 +545,7 @@ router.post("/:id/execute", async (req, res) => {
         followUpsCreated = await generateDefaultFollowUps({
           analysisRunId: run.id,
           propertyId: run.property_id,
-          userId: req.user.id,
+          userId: req.authContext?.user?.id,
         });
       } catch (fuErr) {
         console.warn("[analyses] Non-fatal: follow-up generation failed:", fuErr.message);

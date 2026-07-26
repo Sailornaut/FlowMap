@@ -2,8 +2,8 @@
 
 Running record of the SaaS → internal CRE-intelligence pivot: findings, decisions, implemented slices, verification results, and pending actions. Companion docs: `PIVOT_ARCHITECTURE_ASSESSMENT.md` (ground-truth inventory), `TARGET_ARCHITECTURE.md`, `DATA_MODEL.md`, `REPORT_SCHEMA.md`, `MIGRATION_PLAN.md` (original 7-phase plan), `GOVERNING_ROADMAP_AUDIT.md` (comprehensive audit against the governing Phases 2–10 roadmap).
 
-**Current governing phase: Phase 8 — Internal knowledge assistant (complete). Legacy SaaS removal complete.**
-**Phases 2–8 complete. Legacy billing/subscription model retired. Next: Phase 9.**
+**Current governing phase: Phase 8 — Internal knowledge assistant (complete). Legacy SaaS removal complete. Report engine upgraded.**
+**Phases 2–8 complete. Legacy billing/subscription model retired. Report engine rewritten for CRE-analyst quality. Next: Phase 9.**
 
 ---
 
@@ -293,3 +293,4 @@ See `GOVERNING_ROADMAP_AUDIT.md` for the full acceptance-criterion breakdown.
 | 2026-07-24 | Phase 7 follow-ups (P1–P7) | ✅ user-verified | 179/179 ✅ | n/a | n/a | Migration 0005 (4 tables); 3 route modules; 3 UI pages; auto-milestone generation; all server files pass node --check; vite build 3182 modules |
 | 2026-07-24 | Phase 8 assistant (P1–P4) | ✅ user-verified | 185/185 ✅ | n/a | n/a | Assistant service (9 tools, OpenAI tool-calling); API endpoint with safe logging; floating chat widget; all server files pass node --check; vite build 3183 modules |
 | 2026-07-25 | Legacy SaaS removal | ⚠️ sandbox env | env.test updated | n/a | n/a | Removed: 11 billing functions, 5 billing routes, Stripe webhook, plan-tier enforcement, usage quotas, credit system, checkout flows, plan badges, upgrade prompts, pricing section. Stripe deps removed from package.json. STRIPE_* env vars removed. Landing page pricing → request-access CTA. /app → /workspace redirect. Profile simplified to role-based. AuthContext no longer queries billing_tier. |
+| 2026-07-25 | Report engine upgrade | ⚠️ sandbox env | modules load clean | n/a | n/a | New `report-narratives.js` engine: deterministic site rating, executive narrative, evidence-backed candidate explanations, demographic benchmark comparisons, confidence explanations, risk analysis, data gap identification. PDF rewritten to 12-section professional CRE report structure. `analysis-summary.js` upgraded with site rating, metric interpretations, benchmark comparisons. New PDF styles for score bars, benchmarks, risk cards. Schema version bumped to 2.0.0. No fabricated data. |

@@ -37,6 +37,17 @@ export const VERDICT_COLORS = {
   disqualified: COLORS.danger,
 };
 
+// ── Site rating colors ───────────────────────────────────────────────
+
+export const RATING_COLORS = {
+  "Excellent Opportunity": "#16a34a",
+  "Strong Candidate": "#2563eb",
+  "Promising with Reservations": "#0ea5e9",
+  "Mixed Opportunity": "#ea580c",
+  "Limited Opportunity": "#dc2626",
+  "Unsuitable": "#991b1b",
+};
+
 // ── Typography ────────────────────────────────────────────────────────
 
 export const FONT_SIZES = {
@@ -193,6 +204,136 @@ export const styles = StyleSheet.create({
     borderRadius: 3,
     fontSize: FONT_SIZES.xs,
     fontFamily: "Helvetica-Bold",
+  },
+
+  // Rating badge
+  ratingBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
+  ratingText: {
+    fontSize: FONT_SIZES.lg,
+    fontFamily: "Helvetica-Bold",
+    color: COLORS.background,
+  },
+
+  // Score breakdown bar
+  scoreBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
+  },
+  scoreBarLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    width: 110,
+  },
+  scoreBarTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: COLORS.borderLight,
+    borderRadius: 2,
+    marginRight: 6,
+  },
+  scoreBarFill: {
+    height: 8,
+    borderRadius: 2,
+  },
+  scoreBarValue: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    width: 36,
+    textAlign: "right",
+  },
+
+  // Evidence bullets
+  evidencePositive: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.success,
+    lineHeight: 1.4,
+    marginBottom: 2,
+  },
+  evidenceNegative: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.warning,
+    lineHeight: 1.4,
+    marginBottom: 2,
+  },
+
+  // Benchmark comparison
+  benchmarkRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.5,
+    borderBottomColor: COLORS.border,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  benchmarkMetric: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: "Helvetica-Bold",
+    color: COLORS.textSecondary,
+    width: 120,
+  },
+  benchmarkValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontFamily: "Helvetica-Bold",
+    width: 80,
+  },
+  benchmarkRef: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    width: 80,
+  },
+
+  // Risk cards
+  riskCard: {
+    backgroundColor: COLORS.backgroundAlt,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.warning,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginBottom: 6,
+  },
+  riskTitle: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: "Helvetica-Bold",
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  riskBody: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    lineHeight: 1.4,
+  },
+
+  // Data gap list
+  dataGapItem: {
+    paddingVertical: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: COLORS.borderLight,
+  },
+  dataGapLabel: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: "Helvetica-Bold",
+    color: COLORS.textSecondary,
+  },
+  dataGapDescription: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    lineHeight: 1.3,
+  },
+
+  // Interpretation text
+  interpretationText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 1.5,
+    marginBottom: 4,
+    fontStyle: "italic",
   },
 
   // Layout helpers

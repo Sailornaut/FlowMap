@@ -370,7 +370,7 @@ Migration 0005 creates 4 tables (follow_ups, observed_outcomes, lessons_learned,
 | **Phase 3** — Evidence pipeline | **Complete** | 8 of 8 criteria met (all stages live-verified) |
 | **Phase 4** — Analyst workspace | **Substantially complete** | 12 of 21 criteria met; remaining are override workflow (4.12–4.14, 4.19), narrative review (4.15), resume/save (4.7, 4.16), buildings (4.2) |
 | **Phase 5** — Recommendation engine | **Complete** | 7 of 7 criteria met |
-| **Phase 6** — Report generation | **Complete** | 8 of 9 criteria met (6.3 pending visual inspection, 6.4 partial — maps/charts deferred) |
+| **Phase 6** — Report generation | **Complete (upgraded)** | 8 of 9 criteria met (6.3 pending visual inspection, 6.4 partial — maps/charts deferred). Report engine rewritten 2026-07-25 with CRE-analyst-quality narratives, 12-section structure, deterministic site ratings, benchmark comparisons, evidence-backed recommendations, risk analysis, and data gap identification. |
 | **Phase 7** — Follow-up & learning | **Complete** | 7 of 7 criteria met |
 | **Phase 8** — Knowledge assistant | **Complete** | 5 of 5 criteria met |
 | **Phase 9** — Sales & prospecting | **Not started** | 0 of 5 criteria met |
@@ -383,6 +383,8 @@ Phases 2–8 are complete. The workspace supports the full create-property → r
 **Legacy SaaS model retired (2026-07-25):** Stripe billing, subscription tiers (free/pro/business), usage quotas, credit system, checkout flows, plan badges, upgrade prompts, and pricing sections have been removed. Access is now role-based (`profiles.role`). The `billing_tier`, `stripe_customer_id` columns and `subscriptions`/`usage_events` tables remain in the database but are no longer read or written by application code — schema cleanup deferred to a future migration. Cost tracking via `cost_events` is retained for internal visibility.
 
 185 tests pass. Vite build produces 3183 modules. 5 additive migrations (0001–0005).
+
+**Report engine upgrade (2026-07-25):** PDF reports rewritten from data-dump format to professional CRE analyst report structure. New `server/reports/report-narratives.js` module provides deterministic site ratings (Excellent→Unsuitable from 6 weighted factors), executive narratives, evidence-backed candidate explanations with score breakdown bars, demographic benchmark comparisons (national/state), confidence explanations, structured risk analysis, and data gap identification. Report structure: 12 numbered sections (Property Overview, Executive Assessment, Opportunity Summary, Analysis Status, Demographics, Trade Area, Demand Generators, Recommended Tenant Categories, Risks & Limitations, Data Gaps, Evidence & Sources, Methodology). `analysis-summary.js` upgraded with site rating, metric interpretations, and benchmark comparisons. Report snapshot schema version bumped to 2.0.0. All narrative text is deterministic — no AI-generated rankings or fabricated statistics.
 
 ---
 

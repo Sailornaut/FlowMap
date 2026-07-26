@@ -5,18 +5,26 @@
  * Generates analyst-facing findings from persisted stage outputs.
  * Every statement is traceable to a specific stage output — no fabrication.
  *
- * The summary answers four questions:
- *   1. What does the evidence suggest?
- *   2. What are the strongest positives?
- *   3. What are the main risks or limitations?
- *   4. What should the analyst investigate next?
+ * The summary answers:
+ *   1. What is the overall site assessment?
+ *   2. What does the evidence suggest? (executive narrative)
+ *   3. What are the strongest positives?
+ *   4. What are the main risks or limitations?
+ *   5. What should the analyst investigate next?
+ *   6. How do metrics compare to benchmarks?
+ *   7. What data gaps remain?
  */
+
+// National benchmarks — documented, sourced, static.
+// Sources: U.S. Census Bureau ACS 2023, BLS.
+const NATIONAL_MEDIAN_INCOME = 80610;
+const NATIONAL_MEDIAN_AGE = 38.9;
 
 /**
  * Build a structured summary from analysis stage results.
  *
  * @param {object} analysis - The full analysis object from GET /api/analyses/:id
- * @returns {{ headline: string, positives: string[], risks: string[], nextSteps: string[], methodology: string[] }}
+ * @returns {{ headline: string, siteRating: string, siteScore: number, positives: string[], risks: string[], nextSteps: string[], methodology: string[], metricInterpretations: Array<{metric: string, value: string, interpretation: string}>, dataGaps: string[] }}
  */
 export function buildAnalysisSummary(analysis) {
   const stages = analysis.analysis_stage_results || [];
@@ -29,6 +37,8 @@ export function buildAnalysisSummary(analysis) {
   const risks = [];
   const nextSteps = [];
   const methodology = [];
+  const metricInterpretations = [];
+  const dataGaps = [];
 
   const okCount = stages.filter((s) => s.status === "ok").length;
   const failCount = stages.filter((s) => s.status === "failed").length;
@@ -95,12 +105,71 @@ export function buildAnalysisSummary(analysis) {
     }
 
     if (income != null) {
+      const ratio = income / NATIONAL_MEDIAN_INCOME;
       if (income >= 75000) {
         positives.push(`Median household income: $${income.toLocaleString()} — above national median.`);
       } else if (income >= 50000) {
         positives.push(`Median household income: $${income.toLocaleString()}.`);
       } else {
         risks.push(`Below-average median household income ($${income.toLocaleString()}).`);
+      }
+
+      // Metric interpretation
+      let incomeInterp;
+      if (ratio >= 2) incomeInterp = "Significantly above national averages, indicating strong purchasing power for premium retail and services.";
+      else if (ratio >= 1.2) incomeInterp = "Above the national median, supporting a broad range of retail categories.";
+      else if (ratio >= 0.9) incomeInterp = "Near the national median, supporting value-oriented and convenience retail.";
+      else incomeInterp = "Below the national median, which may limit viable tenant categories.";
+
+      metricInterpretations.push({
+        metric: "Median Household Income",
+        value: `$${income.toLocaleString()} (U.S. median: $${NATIONAL_MEDIAN_INCOME.toLocaleString()})`,
+        interpretation: incomeInterp,
+      });
+    }
+
+    if (age != null) {
+      let ageInterp;
+      if (age < 30) ageInterp = "Younger population favoring fast-casual dining, fitness, and tech-forward retail.";
+      else if (age < 42) ageInterp = "Near the national median age, supporting a broad range of retail and services.";
+      else ageInterp = "Mature population favoring healthcare, professional services, and full-service dining.";
+
+      metricInterpretations.push({
+        metric: "Median Age",
+        value: `${age} (U.S. median: ${NATIONAL_MEDIAN_AGE})`,
+        interpretation: ageInterp,
+      });
+    }
+
+    // Family composition interpretation
+    const familyHH = d.family_households;
+    const totalHH = d.total_households;
+    if (familyHH != null && totalHH != null && totalHH > 0) {
+      const pct = ((familyHH / totalHH) * 100).toFixed(0);
+      if (familyHH / totalHH >= 0.7) {
+        positives.push(`Family households comprise ${pct}% of nearby households, favoring childcare, tutoring, and family dining.`);
+      }
+      metricInterpretations.push({
+        metric: "Family Households",
+        value: `${pct}% of total households`,
+        interpretation: familyHH / totalHH >= 0.7
+          ? "Strongly family-oriented community supporting education, childcare, and family-friendly services."
+          : familyHH / totalHH >= 0.5
+            ? "Balanced household mix supporting both family-oriented and individual-focused retail."
+            : "Individual-focused population favoring convenience services and dining.",
+      });
+    }
+
+    // Homeownership interpretation
+    const ownerOcc = d.owner_occupied;
+    const renterOcc = d.renter_occupied;
+    if (ownerOcc != null && renterOcc != null) {
+      const total = ownerOcc + renterOcc;
+      if (total > 0) {
+        const ownerPct = ((ownerOcc / total) * 100).toFixed(0);
+        if (ownerOcc / total >= 0.7) {
+          positives.push(`High homeownership (${ownerPct}%) suggests a stable, long-term customer base.`);
+        }
       }
     }
 
@@ -127,7 +196,6 @@ export function buildAnalysisSummary(analysis) {
       risks.push("No nearby demand generators found within search radius.");
     }
 
-    // Highlight key anchors
     const schools = cats.school;
     const transit = cats.transit_station;
     if (schools?.count > 0) {
@@ -142,18 +210,97 @@ export function buildAnalysisSummary(analysis) {
     risks.push("Demand-generator search failed — POI data unavailable.");
   }
 
+  // ── Always-present data gaps ─────────────────────────────────────
+  dataGaps.push("Traffic counts — vehicular and pedestrian volumes");
+  dataGaps.push("Lease rates — asking and effective rents");
+  dataGaps.push("Parking utilization — observed occupancy");
+  dataGaps.push("Existing tenant sales — revenue data");
+  dataGaps.push("Historical visitation — cell-phone mobility data");
+  dataGaps.push("Competitor revenue — estimated sales volumes");
+
+  // ── Always-present risks ─────────────────────────────────────────
+  risks.push("Traffic counts unavailable — scoring defaults traffic components to neutral.");
+  risks.push("Lease rates unavailable — rent feasibility cannot be assessed.");
+  risks.push("Competitor density is approximate — OpenStreetMap data may be incomplete.");
+
+  // ── Site rating computation ──────────────────────────────────────
+  let siteScore = 0;
+  let maxScore = 0;
+
+  // Pipeline completion (max 15)
+  maxScore += 15;
+  if (stages.length > 0) {
+    siteScore += Math.round((okCount / stages.length) * 15);
+  }
+
+  // Demographics (max 25)
+  maxScore += 25;
+  const demoData = demo?.outputs?.demographics;
+  if (demoData) {
+    const inc = demoData.median_household_income;
+    if (inc >= 120000) siteScore += 15;
+    else if (inc >= 80000) siteScore += 12;
+    else if (inc >= 60000) siteScore += 8;
+    else if (inc >= 40000) siteScore += 5;
+
+    const p = demoData.total_population;
+    if (p >= 10000) siteScore += 10;
+    else if (p >= 5000) siteScore += 8;
+    else if (p >= 2000) siteScore += 5;
+  }
+
+  // Demand generators (max 20)
+  maxScore += 20;
+  if (demand?.outputs) {
+    const t = demand.outputs.total_pois || 0;
+    if (t >= 50) siteScore += 14;
+    else if (t >= 30) siteScore += 11;
+    else if (t >= 15) siteScore += 8;
+    else if (t >= 5) siteScore += 4;
+
+    const c = demand.outputs.category_summary ? Object.keys(demand.outputs.category_summary).length : 0;
+    if (c >= 7) siteScore += 6;
+    else if (c >= 4) siteScore += 4;
+    else if (c >= 2) siteScore += 2;
+  }
+
+  // Trade area (max 10)
+  maxScore += 10;
+  if (tradeArea?.outputs?.trade_areas?.length >= 3) siteScore += 10;
+  else if (tradeArea?.outputs?.trade_areas?.length > 0) siteScore += 6;
+
+  // Confidence (max 10)
+  maxScore += 10;
+  const conf = analysis.analysis_manifests?.[0]?.overall_confidence;
+  if (conf === "high") siteScore += 10;
+  else if (conf === "moderate") siteScore += 7;
+  else if (conf === "preliminary") siteScore += 3;
+
+  // Normalize
+  const normalized = maxScore > 0 ? Math.round((siteScore / maxScore) * 100) : 0;
+
+  let siteRating;
+  if (normalized >= 90) siteRating = "Excellent Opportunity";
+  else if (normalized >= 75) siteRating = "Strong Candidate";
+  else if (normalized >= 60) siteRating = "Promising with Reservations";
+  else if (normalized >= 45) siteRating = "Mixed Opportunity";
+  else if (normalized >= 30) siteRating = "Limited Opportunity";
+  else siteRating = "Unsuitable";
+
   // ── Overall headline ─────────────────────────────────────────────
   let headline;
   if (failCount === stages.length) {
     headline = "Analysis failed — no usable data was collected.";
   } else if (failCount > 0) {
     headline = `Partial analysis: ${okCount} of ${stages.length} stages completed. Review results with caution.`;
-  } else if (risks.length === 0 && positives.length > 0) {
-    headline = "Evidence is generally favorable. See details below.";
-  } else if (risks.length > positives.length) {
-    headline = "Several risk factors identified. Detailed review recommended.";
+  } else if (normalized >= 75) {
+    headline = "This property demonstrates strong market fundamentals across multiple indicators.";
+  } else if (normalized >= 60) {
+    headline = "This property shows promising characteristics with some areas requiring further investigation.";
+  } else if (normalized >= 45) {
+    headline = "Mixed opportunity profile — both favorable and unfavorable indicators identified.";
   } else {
-    headline = `Analysis complete with ${positives.length} positive indicators and ${risks.length} risk factors.`;
+    headline = "Current evidence suggests limited opportunity based on available data.";
   }
 
   // ── Default next steps ───────────────────────────────────────────
@@ -162,5 +309,15 @@ export function buildAnalysisSummary(analysis) {
     nextSteps.push("Consider on-site visit to validate remote findings.");
   }
 
-  return { headline, positives, risks, nextSteps, methodology };
+  return {
+    headline,
+    siteRating,
+    siteScore: normalized,
+    positives,
+    risks,
+    nextSteps,
+    methodology,
+    metricInterpretations,
+    dataGaps,
+  };
 }

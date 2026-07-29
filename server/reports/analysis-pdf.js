@@ -264,7 +264,7 @@ function ExecutiveAssessmentSection(analysis, siteRating, narrative, confidenceE
     h(View, { style: { flex: 1 } },
       h(Text, { style: [styles.paragraph, styles.bold] }, `Site Score: ${siteRating?.score ?? "–"}/100`),
       h(Text, { style: styles.small }, `Overall Confidence: ${CONFIDENCE_LABEL[manifest?.overall_confidence] || "–"}`),
-      h(Text, { style: styles.small }, `Data Quality: ${CONFIDENCE_LABEL[manifest?.data_quality_confidence] || manifest?.data_quality_confidence || "–"}`),
+      h(Text, { style: styles.small }, `Depth: ${manifest?.depth || "–"}`),
     ),
   ));
 
@@ -667,7 +667,7 @@ function SourcesSection(observations) {
       seen.add(key);
       uniqueSources.push({
         name: key,
-        kind: obs.source_kind || obs.data_sources?.source_type || "–",
+        kind: obs.source_kind || obs.data_sources?.kind || "–",
         tier: obs.reliability_tier ?? obs.data_sources?.reliability_tier ?? "–",
         confidence: obs.confidence || "–",
         retrieved: obs.retrieved_at,
@@ -706,12 +706,14 @@ function MethodologySection(analysis, manifest) {
   ];
 
   if (manifest) {
+    // stages_planned is the JSONB array from the manifest; its length is the stage count
+    const stageCount = Array.isArray(manifest.stages_planned) ? manifest.stages_planned.length : null;
     parts.push(h(View, { style: styles.mt8 },
       KV("Manifest Version", manifest.version),
       KV("Runner Version", manifest.runner_version),
-      KV("Pipeline Stages", `${manifest.stage_count || "–"} stages`),
+      stageCount ? KV("Pipeline Stages", `${stageCount} stages`) : null,
       KV("Overall Confidence", CONFIDENCE_LABEL[manifest.overall_confidence] || manifest.overall_confidence || "–"),
-      KV("Inputs Hash", manifest.inputs_hash),
+      KV("Depth", manifest.depth),
     ));
   }
 
@@ -860,7 +862,7 @@ export function buildReportSnapshot(params) {
     property_id: analysis.property_id,
     property_name: analysis.properties?.name,
     manifest_version: manifest?.version,
-    manifest_inputs_hash: manifest?.inputs_hash,
+    manifest_depth: manifest?.depth,
     overall_confidence: manifest?.overall_confidence,
     depth: analysis.depth,
     site_rating: siteRating?.rating,

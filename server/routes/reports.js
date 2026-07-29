@@ -9,85 +9,9 @@ import { Router } from "express";
 import { getSupabaseAdmin } from "../services/supabase-admin.js";
 import { reportServerError } from "../middleware/error-handler.js";
 import { renderAnalysisPdf, buildReportSnapshot } from "../reports/analysis-pdf.js";
+import { loadAnalysisById, AnalysisLoadError } from "../services/load-analysis.js";
 
 const router = Router();
-
-// ── Helpers ──────────────────────────────────────────────────────────
-
-/**
- * Load a full analysis with all joined data needed for PDF rendering.
- * @param {string} analysisId
- * @returns {Promise<{analysis: object, stageOutputs: object, candidates: Array, vacancies: Array, observations: Array} | null>}
- */
-async function loadAnalysisForReport(analysisId) {
-  const supabase = getSupabaseAdmin();
-
-  // Load analysis with property + manifests + stage results
-  const { data: analysis, error } = await supabase
-    .from("analysis_runs")
-    .select(`
-      *,
-      properties(*),
-      analysis_manifests(version, runner_version, stage_count, inputs_hash, overall_confidence, data_quality_confidence, created_at),
-      analysis_stage_results(id, stage_name, stage_version, status, confidence, completeness, outputs, duration_ms, cost, error, created_at)
-    `)
-    .eq("id", analysisId)
-    .order("version", { referencedTable: "analysis_manifests", ascending: false })
-    .order("created_at", { referencedTable: "analysis_stage_results", ascending: true })
-    .single();
-
-  if (error || !analysis) return null;
-
-  // Build stage outputs map
-  const stageOutputs = {};
-  for (const sr of analysis.analysis_stage_results || []) {
-    if (sr.status === "ok" && sr.outputs) {
-      stageOutputs[sr.stage_name] = sr.outputs;
-    }
-  }
-
-  // Load business candidates with scores
-  const { data: candidates } = await supabase
-    .from("business_candidates")
-    .select(`
-      id, rank, verdict,
-      tenant_categories(slug, name, sector),
-      opportunity_scores(overall, confidence, completeness, positive_factors, negative_factors, disqualifiers,
-        score_components(component_key, normalized, weight, explanation))
-    `)
-    .eq("analysis_run_id", analysisId)
-    .order("rank", { ascending: true });
-
-  // Flatten opportunity_scores from array to single object
-  const flatCandidates = (candidates || []).map((c) => ({
-    ...c,
-    opportunity_scores: Array.isArray(c.opportunity_scores)
-      ? c.opportunity_scores[0]
-      : c.opportunity_scores,
-  }));
-
-  // Load vacancies for the property
-  const { data: vacancies } = await supabase
-    .from("vacancies")
-    .select("*")
-    .eq("property_id", analysis.property_id)
-    .order("unit_label", { ascending: true });
-
-  // Load source observations
-  const { data: observations } = await supabase
-    .from("source_observations")
-    .select("*, data_sources(name, source_type, reliability_tier)")
-    .eq("analysis_run_id", analysisId)
-    .order("retrieved_at", { ascending: false });
-
-  return {
-    analysis,
-    stageOutputs,
-    candidates: flatCandidates,
-    vacancies: vacancies || [],
-    observations: observations || [],
-  };
-}
 
 // ── POST /api/reports/generate/:analysisId ───────────────────────────
 
@@ -97,12 +21,15 @@ async function loadAnalysisForReport(analysisId) {
  * Returns the report_version ID for download.
  */
 router.post("/generate/:analysisId", async (req, res) => {
+  const { analysisId } = req.params;
+  const userId = req.authContext?.user?.id;
+
   try {
-    const { analysisId } = req.params;
+    console.log("[reports] Generate PDF requested", { analysisId, userId });
     const supabase = getSupabaseAdmin();
 
-    // Load full analysis data
-    const loaded = await loadAnalysisForReport(analysisId);
+    // Load full analysis data via shared loader
+    const loaded = await loadAnalysisById(analysisId);
     if (!loaded) {
       return res.status(404).json({ error: "Analysis not found" });
     }
@@ -110,9 +37,10 @@ router.post("/generate/:analysisId", async (req, res) => {
     const { analysis, stageOutputs, candidates, vacancies, observations } = loaded;
 
     // Verify analysis is in a terminal state
-    if (!["completed", "partial"].includes(analysis.status)) {
+    // DB constraint: status in ('queued', 'running', 'partial', 'complete', 'failed')
+    if (!["complete", "partial"].includes(analysis.status)) {
       return res.status(409).json({
-        error: "Analysis must be completed or partial to generate a report",
+        error: "Analysis must be complete or partial to generate a report",
         status: analysis.status,
       });
     }
@@ -154,7 +82,7 @@ router.post("/generate/:analysisId", async (req, res) => {
         .single();
 
       if (projError) {
-        console.error("Failed to create report_project:", projError.message);
+        console.error("[reports] Failed to create report_project:", projError.message);
         return res.status(500).json({ error: "Failed to create report project" });
       }
       projectId = project.id;
@@ -178,8 +106,7 @@ router.post("/generate/:analysisId", async (req, res) => {
     // Render PDF
     const pdfBuffer = await renderAnalysisPdf(pdfParams);
 
-    // Store report_version with snapshot (schema: id, report_project_id, version, snapshot, pdf_file_id, finalized_by, finalized_at, methodology_version_id)
-    // We store pdf_bytes and file_path inside the snapshot since they're not columns.
+    // Store report_version with snapshot
     snapshot.pdf_bytes = pdfBuffer.length;
 
     const { data: version, error: versionError } = await supabase
@@ -193,7 +120,7 @@ router.post("/generate/:analysisId", async (req, res) => {
       .single();
 
     if (versionError) {
-      console.error("Failed to create report_version:", versionError.message);
+      console.error("[reports] Failed to create report_version:", versionError.message);
       return res.status(500).json({ error: "Failed to store report version" });
     }
 
@@ -209,7 +136,7 @@ router.post("/generate/:analysisId", async (req, res) => {
     if (uploadError) {
       // Storage may not be configured — log but don't fail
       // The PDF can still be regenerated from the snapshot
-      console.warn("PDF storage upload failed (non-fatal):", uploadError.message);
+      console.warn("[reports] PDF storage upload failed (non-fatal):", uploadError.message);
     }
 
     // Update snapshot with storage path
@@ -230,7 +157,14 @@ router.post("/generate/:analysisId", async (req, res) => {
       stored: !uploadError,
     });
   } catch (err) {
-    reportServerError(res, err, "report generation");
+    const context = { route: { path: `/api/reports/generate/${analysisId}`, method: "POST" }, userId };
+    if (err instanceof AnalysisLoadError) {
+      console.error("[reports] Analysis load failed:", err.message, { analysisId, supabaseError: err.supabaseError });
+      reportServerError(err, context);
+      return res.status(500).json({ error: "Failed to load analysis data for report generation" });
+    }
+    reportServerError(err, context);
+    return res.status(500).json({ error: "Failed to generate analysis report" });
   }
 });
 
@@ -241,8 +175,9 @@ router.post("/generate/:analysisId", async (req, res) => {
  * First tries Supabase Storage; falls back to re-rendering from snapshot.
  */
 router.get("/:reportVersionId/download", async (req, res) => {
+  const { reportVersionId } = req.params;
+
   try {
-    const { reportVersionId } = req.params;
     const supabase = getSupabaseAdmin();
 
     // Load report version
@@ -250,9 +185,14 @@ router.get("/:reportVersionId/download", async (req, res) => {
       .from("report_versions")
       .select("*, report_projects(property_id, analysis_run_id, title)")
       .eq("id", reportVersionId)
-      .single();
+      .maybeSingle();
 
-    if (error || !version) {
+    if (error) {
+      console.error("[reports] Failed to load report version:", error.message);
+      return res.status(500).json({ error: "Failed to load report version" });
+    }
+
+    if (!version) {
       return res.status(404).json({ error: "Report version not found" });
     }
 
@@ -282,7 +222,7 @@ router.get("/:reportVersionId/download", async (req, res) => {
         return res.status(500).json({ error: "Cannot regenerate — no linked analysis" });
       }
 
-      const loaded = await loadAnalysisForReport(analysisId);
+      const loaded = await loadAnalysisById(analysisId);
       if (!loaded) {
         return res.status(500).json({ error: "Cannot regenerate — analysis data unavailable" });
       }
@@ -305,7 +245,14 @@ router.get("/:reportVersionId/download", async (req, res) => {
     res.setHeader("Content-Length", pdfBuffer.length);
     return res.send(pdfBuffer);
   } catch (err) {
-    reportServerError(res, err, "report download");
+    const context = { route: { path: `/api/reports/${reportVersionId}/download`, method: "GET" } };
+    if (err instanceof AnalysisLoadError) {
+      console.error("[reports] Analysis reload failed during download:", err.message);
+      reportServerError(err, context);
+      return res.status(500).json({ error: "Failed to regenerate report PDF" });
+    }
+    reportServerError(err, context);
+    return res.status(500).json({ error: "Failed to download report" });
   }
 });
 
@@ -316,7 +263,7 @@ router.get("/", async (req, res) => {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from("report_projects")
-      .select("*, report_versions(id, version, status, pdf_bytes, created_at)")
+      .select("*, report_versions(id, version, snapshot, created_at)")
       .order("created_at", { ascending: false });
 
     if (req.query.property_id) {
@@ -328,12 +275,14 @@ router.get("/", async (req, res) => {
 
     const { data, error } = await query.limit(50);
     if (error) {
-      return res.status(500).json({ error: error.message });
+      console.error("[reports] List query failed:", error.message);
+      return res.status(500).json({ error: "Failed to list reports" });
     }
 
     return res.json(data || []);
   } catch (err) {
-    reportServerError(res, err, "list reports");
+    reportServerError(err, { route: { path: "/api/reports", method: "GET" } });
+    return res.status(500).json({ error: "Failed to list reports" });
   }
 });
 

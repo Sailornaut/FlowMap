@@ -13,6 +13,7 @@ import { reportServerError } from "../middleware/error-handler.js";
 import { runPipeline, RUNNER_VERSION } from "../pipeline/runner.js";
 import { ALL_STAGES } from "../pipeline/stages/index.js";
 import { generateDefaultFollowUps } from "./follow-ups.js";
+import { MANIFEST_SELECT, OBSERVATION_SELECT, CANDIDATE_SELECT } from "../services/load-analysis.js";
 
 const router = Router();
 
@@ -66,23 +67,24 @@ router.get("/:id", async (req, res) => {
     }
 
     // Fetch manifests (immutable provenance records)
+    // Uses shared SELECT constant from load-analysis.js to prevent drift
     const { data: manifests } = await supabase
       .from("analysis_manifests")
-      .select("id, version, depth, overall_confidence, runner_version, total_cost_usd, stages_planned, stages_completed, data_sources_used, created_at")
+      .select(MANIFEST_SELECT)
       .eq("analysis_run_id", data.id)
       .order("version", { ascending: false });
 
     // Fetch source observations for this run
     const { data: observations } = await supabase
       .from("source_observations")
-      .select("id, source_url_or_id, retrieved_at, raw_value, normalized_value, unit, confidence, subject_type, data_sources(name, kind, reliability_tier)")
+      .select(OBSERVATION_SELECT)
       .eq("analysis_run_id", data.id)
       .order("retrieved_at");
 
     // Fetch business candidates with scores
     const { data: candidates } = await supabase
       .from("business_candidates")
-      .select("id, rank, verdict, tenant_categories(slug, name, sector), opportunity_scores(overall, confidence, completeness, positive_factors, negative_factors, disqualifiers, score_components(component_key, normalized, weight, explanation))")
+      .select(CANDIDATE_SELECT)
       .eq("analysis_run_id", data.id)
       .order("rank", { ascending: true });
 

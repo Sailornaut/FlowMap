@@ -1,28 +1,25 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="manifest" href="/manifest.json" />
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18036805720"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "AW-18036805720");
-    </script>
-    <title>TrafficScout — Decision Intelligence for Organizations</title>
-    <meta
-      name="description"
-      content="TrafficScout helps organizations make smarter financial and operational decisions through data analysis, benchmarking, and executive-ready recommendations."
-    />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TrafficScout — Keep your next follow-up in sight</title>
+  <meta name="description" content="A focused Google Sheets workflow that organizes inquiries, flags follow-ups, and puts the next action in front of your team. $250 pilot.">
+  <meta property="og:title" content="TrafficScout — Keep your next follow-up in sight"><meta property="og:description" content="One inquiry source. One clear follow-up queue. A $250 fixed-scope pilot."><meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d2230'/%3E%3Cpath d='M8 9h16v4h-6v12h-4V13H8z' fill='%23bef565'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/workflow/style.css"><script src="/workflow/queue.js" defer></script><script src="/workflow/demo.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="wrap masthead"><a class="brand" href="/" aria-label="TrafficScout home"><span class="brand-mark" aria-hidden="true">T</span> TrafficScout</a><nav aria-label="Main navigation"><a href="#demo">Try the demo</a><a href="#pilot">The pilot</a><a class="nav-contact" href="mailto:chatgpt@gettrafficscout.com?subject=TrafficScout%20workflow%20inquiry">Talk through your workflow</a></nav></header>
+<main id="main">
+<section class="hero wrap">
+  <div class="hero-copy"><p class="eyebrow">A practical workflow for small service teams</p><h1>Keep your next<br>follow-up <em>in sight.</em></h1><p class="intro">New inquiries. Open quotes. The people still waiting to hear from you. Turn the spreadsheet you already use into a clear daily action list.</p><div class="hero-actions"><a class="button primary" href="#demo">See it work</a><a class="text-link" href="#pilot">Explore the $250 pilot</a></div><p class="fine">One workflow. Fixed scope. Built in your Google Workspace.</p></div>
+  <div class="queue-preview" aria-label="Illustrative follow-up queue"><div class="preview-top"><span>YOUR NEXT MOVES</span><span class="mono">01 / 03</span></div><div class="preview-row"><span class="number">01</span><div><span class="pill overdue">Overdue</span><h3>Follow up on the quote</h3><p>Jordan Lee · Garage repair</p></div></div><div class="preview-row"><span class="number">02</span><div><span class="pill today">Today</span><h3>Respond to a new inquiry</h3><p>Morgan Chen · Installation</p></div></div><div class="preview-row"><span class="number">03</span><div><span class="pill review">Review</span><h3>Assign an owner</h3><p>Alex Rivera · Service visit</p></div></div><div class="preview-bottom">Illustrative data <span>Every inquiry has a next step.</span></div></div>
+</section>
+<section class="principle"><div class="wrap principle-inner"><p>Less spreadsheet sorting.<br><strong>More useful next steps.</strong></p><div><span class="small-number">01</span><h3>Bring inquiries together</h3><p>Use one existing Google Sheet as the source of truth.</p></div><div><span class="small-number">02</span><h3>Spot what needs attention</h3><p>See overdue replies, due follow-ups, and records that need a check.</p></div><div><span class="small-number">03</span><h3>Give someone the next move</h3><p>Keep the owner, contact, and action together in one queue.</p></div></div></section>
+<section id="demo" class="wrap demo-section"><div class="section-heading"><div><p class="eyebrow">Try the actual sorting logic</p><h2>A messy list.<br>A clear place to start.</h2></div><p>Run the fictional sample below. Change a date, status, or owner to see the queue update. The sample stays in your browser.</p></div>
+<div class="demo-shell"><div class="demo-toolbar"><span class="mono">INQUIRIES / SAMPLE</span><button id="reset" class="quiet" type="button">Reset sample</button></div><div class="demo-grid"><div class="input-pane"><label for="csv">Your inquiry list</label><textarea id="csv" spellcheck="false" aria-describedby="csv-help"></textarea><p class="fine" id="csv-help">Sample data only. Dates: YYYY-MM-DD. Status: new, contacted, quoted, won, or lost.</p><div class="demo-controls"><div><label for="review-date">Review date</label><input type="date" id="review-date" value="2026-10-01" required></div><button class="button primary" type="button" id="run">Build follow-up queue</button></div><p class="rules">New inquiries are due on arrival. Contacted and quoted inquiries are due two days after the last contact. Won and lost inquiries stay out of the queue. Repeated emails are flagged for review.</p></div><div class="output-pane"><div class="output-heading"><h3>Your follow-up queue</h3><button id="download" class="quiet" type="button" disabled>Download CSV</button></div><p id="summary" class="fine" role="status" aria-live="polite"></p><div id="result"></div><p id="error" class="error" role="alert" hidden></p></div></div></div></section>
+<section id="pilot" class="pilot-section"><div class="wrap pilot-grid"><div><p class="eyebrow">The first step is deliberately small</p><h2>One workflow.<br>Ready to use.</h2><p class="intro">For service businesses whose inquiries already land in Google Sheets and whose follow-ups still depend on someone remembering.</p><p>We agree on the inputs, rules, and acceptance checks before starting. The target delivery is two business days after scope, access, and the sample are ready.</p></div><div class="offer"><div class="offer-top"><h3>Inquiry follow-up pilot</h3><div class="price">$250 <span>one time</span></div></div><ul><li>One existing inquiry sheet, up to 1,000 rows</li><li>An owner, next action, and due date for each open inquiry</li><li>A daily internal email digest, if you want it</li><li>A handoff guide and seven days of fixes for the agreed workflow</li></ul><p class="fine">$125 to start after agreeing scope; $125 after the agreed checks pass. Your Google account owns the workflow. Any required subscriptions are agreed separately.</p><a class="button primary" href="mailto:chatgpt@gettrafficscout.com?subject=TrafficScout%20%24250%20pilot&body=Business%3A%0AWhere%20inquiries%20arrive%3A%0AWhat%20gets%20missed%3A%0AApproximate%20weekly%20inquiries%3A%0A">Describe your workflow</a><p class="fine">Opens your email app. Start with a description; no customer data needed.</p></div></div></section>
+<section class="wrap faq-section"><div><p class="eyebrow">Before we start</p><h2>A clear fit<br>makes a better pilot.</h2></div><div class="questions"><details><summary>Will this send messages to my customers?</summary><p>The pilot organizes follow-ups for your team. Customer messages remain a human action. The optional digest goes only to an internal address you choose.</p></details><details><summary>What if my inquiries arrive somewhere else?</summary><p>Email, CRM, and other sources may need a different scope. Describe the source first so we can check feasibility and price before you commit.</p></details><details><summary>How will we know it works?</summary><p>We test agreed sample inquiries, date rules, ownership, and the output together. Acceptance means those checks pass; it does not promise a particular sales result.</p></details><details><summary>What does my team need to maintain?</summary><p>Keep status, owner, and the last contact date current. The workflow uses those fields to decide what needs attention. You receive the instructions and source when we hand it over.</p></details></div></section>
+</main><footer class="wrap footer"><a class="brand" href="#"><span class="brand-mark" aria-hidden="true">T</span> TrafficScout</a><a href="mailto:chatgpt@gettrafficscout.com">chatgpt@gettrafficscout.com</a><span>A focused fix for the work between inquiries and replies.</span></footer>
+</body></html>

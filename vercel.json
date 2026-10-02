@@ -1,8 +1,20 @@
 {
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/workflow",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/workflow/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!api/|workflow/).*)",
+      "destination": "/app.html"
     }
   ]
 }
